@@ -17,8 +17,13 @@ export default async function handler(req, res) {
   try {
     // 1. Inizializza Gemini
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    // Usiamo gemini-2.5-flash, che è il modello stabile e performante indicato nella documentazione
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    
+    // Ripristiniamo gemini-2.5-flash su v1beta come richiesto, 
+    // dato che è confermato funzionante in altri tuoi progetti.
+    const model = genAI.getGenerativeModel(
+      { model: "gemini-2.5-flash" },
+      { apiVersion: 'v1beta' }
+    );
 
     const prompt = `Agisci come un esperto trascrittore musicale specializzato nel formato ChordPro. 
     Analizza l'immagine e restituisci ESCLUSIVAMENTE il codice ChordPro.
