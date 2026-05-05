@@ -9,47 +9,58 @@ const UploadPage: React.FC = () => {
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [logs, setLogs] = useState<string[]>([]);
 
-  const compressImage = (base64Str: string): Promise<string> => {
+  const processImage = (file: File, currentImages: string[]): Promise<string> => {
     return new Promise((resolve) => {
-      const img = new Image();
-      img.src = base64Str;
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 1200;
-        const MAX_HEIGHT = 1200;
-        let width = img.width;
-        let height = img.height;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.src = e.target?.result as string;
+        img.onload = () => {
+          // Calcoliamo il peso totale stimato in memoria (in byte)
+          // Un carattere base64 è circa 1 byte, ma qui ragioniamo sui file originali
+          const estimatedTotalSize = currentImages.reduce((acc, img) => acc + img.length, 0) + file.size;
+          
+          // Se siamo ampiamente sotto il limite di Vercel (4.5MB base64 -> ~3.3MB raw)
+          // Manteniamo una qualità altissima.
+          const isLarge = estimatedTotalSize > 3000000; 
+          
+          const canvas = document.createElement('canvas');
+          // Alziamo la risoluzione massima a 2000px per una precisione OCR superiore
+          const MAX_SIZE = isLarge ? 1600 : 2000; 
+          let width = img.width;
+          let height = img.height;
 
-        if (width > height) {
-          if (width > MAX_WIDTH) {
-            height *= MAX_WIDTH / width;
-            width = MAX_WIDTH;
+          if (width > height) {
+            if (width > MAX_SIZE) {
+              height *= MAX_SIZE / width;
+              width = MAX_SIZE;
+            }
+          } else {
+            if (height > MAX_SIZE) {
+              width *= MAX_SIZE / height;
+              height = MAX_SIZE;
+            }
           }
-        } else {
-          if (height > MAX_HEIGHT) {
-            width *= MAX_HEIGHT / height;
-            height = MAX_HEIGHT;
-          }
-        }
 
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx?.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.7)); // Comprimiamo a 0.7 di qualità
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          
+          // Qualità dinamica: 0.9 se c'è spazio, 0.7 solo se necessario
+          const quality = isLarge ? 0.7 : 0.9;
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
       };
+      reader.readAsDataURL(file);
     });
   };
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && images.length < 2) {
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const compressed = await compressImage(reader.result as string);
-        setImages(prev => [...prev, compressed]);
-      };
-      reader.readAsDataURL(file);
+      const processed = await processImage(file, images);
+      setImages(prev => [...prev, processed]);
     }
   };
 
