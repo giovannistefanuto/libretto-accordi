@@ -2,114 +2,74 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Octokit } from "@octokit/rest";
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const { image, title: userTitle, testMode } = req.body;
   const logs = [];
   const addLog = (msg) => {
-    const timestamp = new Date().toLocaleTimeString();
-    logs.push(`[${timestamp}] ${msg}`);
+    logs.push(`[${new Date().toLocaleTimeString()}] ${msg}`);
     console.log(msg);
   };
 
-  addLog("Inizio processo richiesta...");
-
+  addLog("--- DIAGNOSTICA AVVIATA ---");
   const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
   const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-  const REPO_OWNER = process.env.GITHUB_REPO_OWNER;
-  const REPO_NAME = process.env.GITHUB_REPO_NAME;
 
   try {
     if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY mancante");
-    if (!GITHUB_TOKEN) throw new Error("GITHUB_TOKEN mancante");
-    addLog("Variabili d'ambiente verificate.");
+    addLog("Chiave API trovata (lunghezza: " + GEMINI_API_KEY.length + ")");
+
+    // TEST DI CONNESSIONE DIRETTA (Senza libreria se possibile, o con fetch)
+    addLog("Verifica validità chiave tramite fetch diretto...");
+    const testUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${GEMINI_API_KEY}`;
+    const testRes = await fetch(testUrl);
+    const testData = await testRes.json();
+
+    if (!testRes.ok) {
+      addLog(`ERRORE DIRETTO GOOGLE: ${testRes.status} - ${JSON.stringify(testData.error)}`);
+      throw new Error(`Google ha rifiutato la chiave: ${testData.error?.message || 'Errore sconosciuto'}`);
+    }
+
+    const availableModels = testData.models?.map(m => m.name.replace('models/', '')) || [];
+    addLog(`CHIAVE VALIDA! Modelli disponibili per te: ${availableModels.slice(0, 5).join(', ')}...`);
+
+    if (testMode) {
+      return res.status(200).json({ success: true, logs, models: availableModels });
+    }
+
+    // Se arriviamo qui, proviamo a usare il primo modello disponibile che supporta la visione
+    const targetModel = availableModels.find(m => m.includes('flash')) || "gemini-1.5-flash";
+    addLog(`Scelto modello consigliato: ${targetModel}`);
 
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    
-    const callGemini = async (modelName, apiVer) => {
-      addLog(`Provando: ${modelName} (${apiVer})...`);
-      const model = genAI.getGenerativeModel(
-        { model: modelName },
-        { apiVersion: apiVer }
-      );
+    const model = genAI.getGenerativeModel({ model: targetModel });
 
-      if (testMode) {
-        const result = await model.generateContent("Rispondi solo 'OK'");
-        return result;
-      } else {
-        const base64Data = image.split(',')[1] || image;
-        const prompt = `Agisci come un esperto trascrittore musicale specializzato nel formato ChordPro. 
-        Analizza l'immagine e restituisci ESCLUSIVAMENTE il codice ChordPro.
-        Titolo: ${userTitle}.
-        Restituisci SOLO il blocco di codice ChordPro, senza commenti.`;
+    const base64Data = image.split(',')[1] || image;
+    const result = await model.generateContent([
+      { inlineData: { data: base64Data, mimeType: "image/jpeg" } },
+      { text: `Trascrivi in ChordPro. Titolo: ${userTitle}` }
+    ]);
 
-        const result = await model.generateContent([
-          { inlineData: { data: base64Data, mimeType: "image/jpeg" } },
-          { text: prompt }
-        ]);
-        return result;
-      }
-    };
+    const chordProContent = result.response.text().replace(/```chordpro|```/g, '').trim();
+    addLog("Trascrizione completata.");
 
-    // Lista di tentativi in ordine di preferenza
-    const attempts = [
-      { name: "gemini-2.5-flash", ver: "v1beta" },
-      { name: "gemini-1.5-flash", ver: "v1beta" },
-      { name: "gemini-1.5-flash-latest", ver: "v1beta" },
-      { name: "gemini-1.5-flash", ver: "v1" }
-    ];
-
-    let result;
-    let lastError = "";
-
-    for (const attempt of attempts) {
-      try {
-        result = await callGemini(attempt.name, attempt.ver);
-        addLog(`SUCCESSO con ${attempt.name}!`);
-        break; // Se funziona, esci dal ciclo
-      } catch (err) {
-        lastError = err.message;
-        addLog(`FALLITO ${attempt.name}: ${lastError.substring(0, 100)}...`);
-      }
-    }
-
-    if (!result) {
-      throw new Error(`Tutti i modelli hanno fallito. Ultimo errore: ${lastError}`);
-    }
-
-    const responseText = result.response.text();
-    if (testMode) {
-      addLog("Risposta: " + responseText);
-      return res.status(200).json({ success: true, logs, debug: responseText });
-    }
-
-    const chordProContent = responseText.replace(/```chordpro|```/g, '').trim();
-    addLog("Contenuto ChordPro generato.");
-
-    addLog("Salvataggio su GitHub...");
+    // GitHub
     const octokit = new Octokit({ auth: GITHUB_TOKEN });
-
-    const fileName = (userTitle || 'nuova-canzone')
-      .toLowerCase()
-      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-      .replace(/\s+/g, '-')
-      .replace(/[^a-z0-9-]/g, '') + '.chordpro';
+    const fileName = (userTitle || 'canzone').toLowerCase().replace(/\s+/g, '-') + '.chordpro';
 
     await octokit.repos.createOrUpdateFileContents({
-      owner: REPO_OWNER,
-      repo: REPO_NAME,
+      owner: process.env.GITHUB_REPO_OWNER,
+      repo: process.env.GITHUB_REPO_NAME,
       path: `src/songs/${fileName}`,
-      message: `Aggiunta automatica: ${userTitle}`,
+      message: `Aggiunta: ${userTitle}`,
       content: Buffer.from(chordProContent).toString('base64'),
     });
 
-    addLog("Canzone salvata online!");
-    return res.status(200).json({ success: true, fileName, logs });
+    addLog("Salvato su GitHub!");
+    return res.status(200).json({ success: true, logs });
 
   } catch (error) {
-    addLog("ERRORE FINALE: " + error.message);
+    addLog("FALLIMENTO: " + error.message);
     return res.status(500).json({ error: error.message, logs });
   }
 }
