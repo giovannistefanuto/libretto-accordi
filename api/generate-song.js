@@ -113,6 +113,22 @@ export default async function handler(req, res) {
       .replace(/[^a-z0-9-]/g, '') + '.chordpro';
 
     const path = `src/songs/${fileName}`;
+    
+    // --- GESTIONE SHA PER SOVRASCRITTURA ---
+    let currentSha = null;
+    try {
+      const { data: existingFile } = await octokit.repos.getContent({
+        owner: REPO_OWNER,
+        repo: REPO_NAME,
+        path: path,
+      });
+      if (existingFile && !Array.isArray(existingFile)) {
+        currentSha = existingFile.sha;
+        addLog("File esistente trovato, aggiornamento in corso...");
+      }
+    } catch (e) {
+      addLog("Nuovo file, creazione in corso...");
+    }
 
     await octokit.repos.createOrUpdateFileContents({
       owner: REPO_OWNER,
@@ -120,6 +136,7 @@ export default async function handler(req, res) {
       path: path,
       message: `✨ Auto-upload: ${userTitle}`,
       content: Buffer.from(chordProContent).toString('base64'),
+      sha: currentSha || undefined // Necessario per sovrascrivere
     });
 
     addLog(`FILE SALVATO: ${path}`);
