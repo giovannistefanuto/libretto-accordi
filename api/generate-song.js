@@ -81,36 +81,12 @@ export default async function handler(req, res) {
             { text: prompt }
           ]);
 
-          let rawContent = result.response.text().replace(/```chordpro|```/g, '').trim();
-
-          // --- FUNZIONE DI CONVERSIONE POST-GEMINI ---
-          const convertToInternational = (text) => {
-            const map = {
-              'DO': 'C', 'RE': 'D', 'MI': 'E', 'FA': 'F', 'SOL': 'G', 'LA': 'A', 'SI': 'B',
-              'Do': 'C', 'Re': 'D', 'Mi': 'E', 'Fa': 'F', 'Sol': 'G', 'La': 'A', 'Si': 'B',
-              'do': 'C', 're': 'D', 'mi': 'E', 'fa': 'F', 'sol': 'G', 'la': 'A', 'si': 'B'
-            };
-            // Regex per trovare accordi tra parentesi quadre [Sol], [Do#], [Mibm], [Fa7]
-            return text.replace(/\[([a-zA-Z#b0-9]+)\]/g, (match, chord) => {
-              // Estraiamo la nota base (es. 'Sol' da 'Solm7')
-              let converted = chord;
-              for (const [ita, eng] of Object.entries(map)) {
-                if (chord.startsWith(ita)) {
-                  converted = chord.replace(ita, eng);
-                  break;
-                }
-              }
-              return `[${converted}]`;
-            });
-          };
-
-          chordProContent = convertToInternational(rawContent);
-
+          chordProContent = result.response.text().replace(/```chordpro|```/g, '').trim();
+          
           if (chordProContent) {
-            addLog(`Trascrizione completata e normalizzata (A, B, C).`);
+            addLog(`Trascrizione completata con successo.`);
             break; 
           }
-
         } catch (err) {
           addLog(`Errore ${keyLabel}: ${err.message.substring(0, 50)}...`);
           if (attempt < 2) {
