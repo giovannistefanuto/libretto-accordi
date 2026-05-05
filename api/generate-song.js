@@ -29,7 +29,7 @@ export default async function handler(req, res) {
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     
     const callGemini = async (modelName, apiVer) => {
-      addLog(`Tentativo con modello: ${modelName} (${apiVer})...`);
+      addLog(`Provando: ${modelName} (${apiVer})...`);
       const model = genAI.getGenerativeModel(
         { model: modelName },
         { apiVersion: apiVer }
@@ -53,25 +53,42 @@ export default async function handler(req, res) {
       }
     };
 
+    // Lista di tentativi in ordine di preferenza
+    const attempts = [
+      { name: "gemini-2.5-flash", ver: "v1beta" },
+      { name: "gemini-1.5-flash", ver: "v1beta" },
+      { name: "gemini-1.5-flash-latest", ver: "v1beta" },
+      { name: "gemini-1.5-flash", ver: "v1" }
+    ];
+
     let result;
-    try {
-      result = await callGemini("gemini-2.5-flash", "v1beta");
-    } catch (err) {
-      addLog(`Errore con 2.5-flash: ${err.message}`);
-      addLog("Provo fallback su 1.5-flash (v1)...");
-      result = await callGemini("gemini-1.5-flash", "v1");
+    let lastError = "";
+
+    for (const attempt of attempts) {
+      try {
+        result = await callGemini(attempt.name, attempt.ver);
+        addLog(`SUCCESSO con ${attempt.name}!`);
+        break; // Se funziona, esci dal ciclo
+      } catch (err) {
+        lastError = err.message;
+        addLog(`FALLITO ${attempt.name}: ${lastError.substring(0, 100)}...`);
+      }
+    }
+
+    if (!result) {
+      throw new Error(`Tutti i modelli hanno fallito. Ultimo errore: ${lastError}`);
     }
 
     const responseText = result.response.text();
     if (testMode) {
-      addLog("Risposta ricevuta: " + responseText);
+      addLog("Risposta: " + responseText);
       return res.status(200).json({ success: true, logs, debug: responseText });
     }
 
     const chordProContent = responseText.replace(/```chordpro|```/g, '').trim();
     addLog("Contenuto ChordPro generato.");
 
-    addLog("Connessione a GitHub...");
+    addLog("Salvataggio su GitHub...");
     const octokit = new Octokit({ auth: GITHUB_TOKEN });
 
     const fileName = (userTitle || 'nuova-canzone')
@@ -88,11 +105,11 @@ export default async function handler(req, res) {
       content: Buffer.from(chordProContent).toString('base64'),
     });
 
-    addLog("File salvato su GitHub!");
+    addLog("Canzone salvata online!");
     return res.status(200).json({ success: true, fileName, logs });
 
   } catch (error) {
-    addLog("ERRORE: " + error.message);
+    addLog("ERRORE FINALE: " + error.message);
     return res.status(500).json({ error: error.message, logs });
   }
 }
