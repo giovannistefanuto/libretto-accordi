@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Camera, Upload, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Camera, Upload, Loader2, CheckCircle2 } from 'lucide-react';
 
 const UploadPage: React.FC = () => {
   const navigate = useNavigate();
@@ -157,8 +157,8 @@ const UploadPage: React.FC = () => {
               </div>
             ))}
             {status === 'success' && (
-              <div style={{ color: '#10b981', marginTop: '1rem', fontWeight: 'bold' }}>
-                <CheckCircle2 size={16} inline /> OPERAZIONE COMPLETATA CON SUCCESSO!
+              <div style={{ color: '#10b981', marginTop: '1rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <CheckCircle2 size={16} /> OPERAZIONE COMPLETATA CON SUCCESSO!
               </div>
             )}
           </div>
