@@ -4,14 +4,16 @@ import { Octokit } from "@octokit/rest";
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { image, title: userTitle, testMode } = req.body;
+  const { images, image, title: userTitle, testMode } = req.body;
+  // Supporto sia per 'image' (vecchio) che 'images' (nuovo)
+  const imagesList = images || (image ? [image] : []);
+  
   const logs = [];
   const addLog = (msg) => {
     logs.push(`[${new Date().toLocaleTimeString()}] ${msg}`);
     console.log(msg);
   };
 
-  const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
   const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
   const REPO_OWNER = process.env.GITHUB_REPO_OWNER;
   const REPO_NAME = process.env.GITHUB_REPO_NAME;
@@ -69,23 +71,23 @@ export default async function handler(req, res) {
             { text: prompt }
           ]);
 
-        chordProContent = result.response.text().replace(/```chordpro|```/g, '').trim();
-        
-        if (chordProContent) {
-          addLog(`Trascrizione completata con successo.`);
-          break; 
-        }
-      } catch (err) {
-        addLog(`Errore ${keyLabel}: ${err.message.substring(0, 50)}...`);
-        if (attempt < 2) {
-          addLog("Retry rapido (1s)...");
-          await sleep(1000); // Attesa minima
+          chordProContent = result.response.text().replace(/```chordpro|```/g, '').trim();
+          
+          if (chordProContent) {
+            addLog(`Trascrizione completata con successo.`);
+            break; 
+          }
+        } catch (err) {
+          addLog(`Errore ${keyLabel}: ${err.message.substring(0, 50)}...`);
+          if (attempt < 2) {
+            addLog("Retry rapido (1s)...");
+            await sleep(1000); // Attesa minima
+          }
         }
       }
-    }
 
-    if (chordProContent) break;
-  }
+      if (chordProContent) break;
+    }
 
     if (!chordProContent) {
       throw new Error("Tutte le chiavi API hanno fallito dopo i tentativi previsti.");
@@ -118,8 +120,5 @@ export default async function handler(req, res) {
   } catch (error) {
     addLog("ERRORE: " + error.message);
     return res.status(500).json({ error: error.message, logs });
-  }
-}
-es.status(500).json({ error: error.message, logs });
   }
 }

@@ -5,24 +5,28 @@ import { ArrowLeft, Camera, Upload, Loader2, CheckCircle2 } from 'lucide-react';
 const UploadPage: React.FC = () => {
   const navigate = useNavigate();
   const [title, setTitle] = useState('');
-  const [image, setImage] = useState<string | null>(null);
+  const [images, setImages] = useState<string[]>([]);
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [logs, setLogs] = useState<string[]>([]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
+    if (file && images.length < 2) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImage(reader.result as string);
+        setImages(prev => [...prev, reader.result as string]);
       };
       reader.readAsDataURL(file);
     }
   };
 
+  const removeImage = (index: number) => {
+    setImages(prev => prev.filter((_, i) => i !== index));
+  };
+
   const executeRequest = async (isTest: boolean = false) => {
-    if (!isTest && (!image || !title)) {
-      alert('Inserisci titolo e seleziona un\'immagine');
+    if (!isTest && (images.length === 0 || !title)) {
+      alert('Inserisci titolo e almeno un\'immagine');
       return;
     }
 
@@ -34,7 +38,7 @@ const UploadPage: React.FC = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          image: isTest ? null : image, 
+          images: isTest ? [] : images, 
           title: isTest ? "Test API" : title,
           testMode: isTest 
         }),
