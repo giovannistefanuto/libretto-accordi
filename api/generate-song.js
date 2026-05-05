@@ -16,34 +16,80 @@ export default async function handler(req, res) {
   const REPO_OWNER = process.env.GITHUB_REPO_OWNER;
   const REPO_NAME = process.env.GITHUB_REPO_NAME;
 
+  // Caricamento chiavi Gemini (fino a 5)
+  const geminiKeys = [
+    process.env.GEMINI_API_KEY, // Chiave principale
+    process.env.GEMINI_API_KEY_2,
+    process.env.GEMINI_API_KEY_3,
+    process.env.GEMINI_API_KEY_4,
+    process.env.GEMINI_API_KEY_5
+  ].filter(key => !!key); // Rimuove quelle non definite
+
+  const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
   try {
     addLog("--- AVVIO PROCESSO ---");
     
     if (testMode) {
-      addLog("Test connessione riuscito (Modello confermato: gemini-2.5-flash)");
+      addLog(`Test connessione: ${geminiKeys.length} chiavi configurate.`);
       return res.status(200).json({ success: true, logs, debug: "API OK" });
     }
 
-    addLog(`Elaborazione canzone: ${userTitle}`);
-    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    addLog(`Elaborazione canzone: ${userTitle} (${imagesList.length} immagini)`);
+    let chordProContent = null;
 
-    const base64Data = image.split(',')[1] || image;
-    
-    addLog("Inviando immagine a Gemini 2.5 Flash...");
-    const prompt = `Agisci come un esperto trascrittore musicale specializzato nel formato ChordPro. 
-    Analizza l'immagine e restituisci ESCLUSIVAMENTE il codice ChordPro.
-    Regole: Accordi tra [] prima della sillaba, usa {start_of_verse}/{end_of_verse} e {start_of_chorus}/{end_of_chorus}.
-    Il titolo della canzone è: ${userTitle}.
-    IMPORTANTE: Restituisci SOLO il blocco di codice ChordPro, senza commenti o introduzioni.`;
+    // Preparazione dati multimediali per Gemini
+    const mediaParts = imagesList.map(img => ({
+      inlineData: {
+        data: img.split(',')[1] || img,
+        mimeType: "image/jpeg"
+      }
+    }));
 
-    const result = await model.generateContent([
-      { inlineData: { data: base64Data, mimeType: "image/jpeg" } },
-      { text: prompt }
-    ]);
+    // --- LOGICA DI RETRY E ROTAZIONE CHIAVI (Ottimizzata per Vercel Hobby 10s timeout) ---
+    for (let k = 0; k < geminiKeys.length; k++) {
+      const currentKey = geminiKeys[k];
+      const keyLabel = `Chiave ${k + 1}`;
+      
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          addLog(`${keyLabel} - Tentativo ${attempt}/2...`);
+          
+          const genAI = new GoogleGenerativeAI(currentKey);
+          const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-    const chordProContent = result.response.text().replace(/```chordpro|```/g, '').trim();
-    addLog("Trascrizione ChordPro completata con successo.");
+          const prompt = `Agisci come un esperto trascrittore musicale specializzato nel formato ChordPro. 
+          Analizza le immagini fornite (possono essere più pagine della stessa canzone) e restituisci un UNICO codice ChordPro che le unisca in ordine.
+          Regole: Accordi tra [] prima della sillaba, usa {start_of_verse}/{end_of_verse} e {start_of_chorus}/{end_of_chorus}.
+          Il titolo della canzone è: ${userTitle}.
+          IMPORTANTE: Restituisci SOLO il blocco di codice ChordPro, senza commenti o introduzioni.`;
+
+          const result = await model.generateContent([
+            ...mediaParts,
+            { text: prompt }
+          ]);
+
+        chordProContent = result.response.text().replace(/```chordpro|```/g, '').trim();
+        
+        if (chordProContent) {
+          addLog(`Trascrizione completata con successo.`);
+          break; 
+        }
+      } catch (err) {
+        addLog(`Errore ${keyLabel}: ${err.message.substring(0, 50)}...`);
+        if (attempt < 2) {
+          addLog("Retry rapido (1s)...");
+          await sleep(1000); // Attesa minima
+        }
+      }
+    }
+
+    if (chordProContent) break;
+  }
+
+    if (!chordProContent) {
+      throw new Error("Tutte le chiavi API hanno fallito dopo i tentativi previsti.");
+    }
 
     addLog("Connessione a GitHub per il salvataggio...");
     const octokit = new Octokit({ auth: GITHUB_TOKEN });
@@ -72,5 +118,8 @@ export default async function handler(req, res) {
   } catch (error) {
     addLog("ERRORE: " + error.message);
     return res.status(500).json({ error: error.message, logs });
+  }
+}
+es.status(500).json({ error: error.message, logs });
   }
 }

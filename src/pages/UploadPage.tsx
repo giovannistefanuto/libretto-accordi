@@ -84,39 +84,51 @@ const UploadPage: React.FC = () => {
               onChange={handleImageChange}
               id="camera-input"
               style={{ display: 'none' }}
-              disabled={status === 'loading'}
+              disabled={status === 'loading' || images.length >= 2}
             />
-            <label
-              htmlFor="camera-input"
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '1rem',
-                padding: '2rem',
-                border: '2px dashed var(--chord-color)',
-                borderRadius: '12px',
-                cursor: 'pointer',
-                background: image ? 'transparent' : 'rgba(37, 99, 235, 0.05)',
-                marginBottom: '1rem'
-              }}
-            >
-              {image ? (
-                <img src={image} alt="Preview" style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px' }} />
-              ) : (
-                <>
-                  <Camera size={48} color="var(--chord-color)" />
-                  <span>Scatta foto o scegli galleria</span>
-                </>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: images.length > 1 ? '1fr 1fr' : '1fr', gap: '1rem', marginBottom: '1rem' }}>
+              {images.map((img, index) => (
+                <div key={index} style={{ position: 'relative' }}>
+                  <img src={img} alt={`Preview ${index}`} style={{ width: '100%', height: '150px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #333' }} />
+                  <button 
+                    onClick={() => removeImage(index)}
+                    style={{ position: 'absolute', top: '-10px', right: '-10px', background: '#ff4444', color: 'white', borderRadius: '50%', width: '24px', height: '24px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer' }}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              
+              {images.length < 2 && (
+                <label
+                  htmlFor="camera-input"
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                    padding: '1rem',
+                    border: '2px dashed var(--chord-color)',
+                    borderRadius: '12px',
+                    cursor: 'pointer',
+                    background: 'rgba(37, 99, 235, 0.05)',
+                    height: '150px'
+                  }}
+                >
+                  <Camera size={32} color="var(--chord-color)" />
+                  <span style={{ fontSize: '0.8rem' }}>{images.length === 0 ? 'Aggiungi foto' : 'Aggiungi seconda pagina'}</span>
+                </label>
               )}
-            </label>
+            </div>
           </div>
         </div>
 
         <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
           <button
             onClick={() => executeRequest(false)}
-            disabled={!image || !title || status === 'loading'}
+            disabled={images.length === 0 || !title || status === 'loading'}
             style={{ flex: 2, justifyContent: 'center' }}
           >
             {status === 'loading' ? <Loader2 className="animate-spin" size={20} /> : <Upload size={20} />}
