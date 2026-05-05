@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Music, ChevronRight, Search } from 'lucide-react';
+import { Music, ChevronRight, Search, PlusCircle } from 'lucide-react';
 import { loadSongs } from '../utils/songLoader';
 import type { SongMetadata } from '../utils/songLoader';
 
@@ -26,15 +26,22 @@ const Home: React.FC = () => {
         <p>Il tuo canzoniere digitale</p>
       </header>
 
-      <div className="search-container">
-        <Search className="search-icon" size={20} />
-        <input 
-          type="text" 
-          placeholder="Cerca una canzone o un artista..." 
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="search-input"
-        />
+      <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '2rem' }}>
+        <div className="search-container" style={{ margin: 0, flex: 1 }}>
+          <Search className="search-icon" size={20} />
+          <input 
+            type="text" 
+            placeholder="Cerca..." 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="search-input"
+          />
+        </div>
+        <Link to="/upload" style={{ textDecoration: 'none' }}>
+          <button style={{ borderRadius: '50px', padding: '0.75rem 1.5rem', whiteSpace: 'nowrap' }}>
+            <PlusCircle size={20} /> Aggiungi
+          </button>
+        </Link>
       </div>
 
       <div className="song-list">
