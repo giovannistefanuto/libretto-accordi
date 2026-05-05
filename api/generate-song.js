@@ -17,23 +17,30 @@ export default async function handler(req, res) {
   try {
     // 1. Inizializza Gemini
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+    // Usiamo gemini-1.5-flash che è il nome standard aggiornato o il modello suggerito
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     const prompt = `Agisci come un esperto trascrittore musicale specializzato nel formato ChordPro. 
     Analizza l'immagine e restituisci ESCLUSIVAMENTE il codice ChordPro.
     Regole: Accordi tra [] prima della sillaba, usa {start_of_verse}/{end_of_verse} e {start_of_chorus}/{end_of_chorus}.
     Il titolo della canzone è: ${userTitle || 'Sconosciuto'}.
-    Restituisci solo il codice, senza testo introduttivo.`;
+    IMPORTANTE: Restituisci SOLO il blocco di codice ChordPro, senza commenti o introduzioni.`;
 
     // Rimuovi l'intestazione data:image/... se presente
     const base64Data = image.split(',')[1] || image;
 
     const result = await model.generateContent([
-      prompt,
-      { inlineData: { data: base64Data, mimeType: "image/jpeg" } }
+      {
+        inlineData: {
+          data: base64Data,
+          mimeType: "image/jpeg"
+        }
+      },
+      { text: prompt }
     ]);
 
-    const chordProContent = result.response.text().replace(/```chordpro|```/g, '').trim();
+    const responseText = result.response.text();
+    const chordProContent = responseText.replace(/```chordpro|```/g, '').trim();
 
     // 2. Salva su GitHub
     const octokit = new Octokit({ auth: GITHUB_TOKEN });
