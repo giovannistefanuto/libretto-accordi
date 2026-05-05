@@ -22,46 +22,56 @@ export default async function handler(req, res) {
   const REPO_NAME = process.env.GITHUB_REPO_NAME;
 
   try {
-    // Check ENV
-    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY mancante nelle variabili d'ambiente di Vercel");
+    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY mancante");
     if (!GITHUB_TOKEN) throw new Error("GITHUB_TOKEN mancante");
-    addLog("Variabili d'ambiente verificate correttamente.");
+    addLog("Variabili d'ambiente verificate.");
 
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel(
-      { model: "gemini-2.5-flash" },
-      { apiVersion: 'v1beta' }
-    );
+    
+    const callGemini = async (modelName, apiVer) => {
+      addLog(`Tentativo con modello: ${modelName} (${apiVer})...`);
+      const model = genAI.getGenerativeModel(
+        { model: modelName },
+        { apiVersion: apiVer }
+      );
 
-    if (testMode) {
-      addLog("Modalità TEST attiva: invio 'Ciao' a Gemini...");
-      const result = await model.generateContent("Rispondi solo con la parola 'FUNZIONA' se ricevi questo messaggio.");
-      addLog("Risposta ricevuta da Gemini: " + result.response.text());
-      return res.status(200).json({ success: true, logs, debug: result.response.text() });
+      if (testMode) {
+        const result = await model.generateContent("Rispondi solo 'OK'");
+        return result;
+      } else {
+        const base64Data = image.split(',')[1] || image;
+        const prompt = `Agisci come un esperto trascrittore musicale specializzato nel formato ChordPro. 
+        Analizza l'immagine e restituisci ESCLUSIVAMENTE il codice ChordPro.
+        Titolo: ${userTitle}.
+        Restituisci SOLO il blocco di codice ChordPro, senza commenti.`;
+
+        const result = await model.generateContent([
+          { inlineData: { data: base64Data, mimeType: "image/jpeg" } },
+          { text: prompt }
+        ]);
+        return result;
+      }
+    };
+
+    let result;
+    try {
+      result = await callGemini("gemini-2.5-flash", "v1beta");
+    } catch (err) {
+      addLog(`Errore con 2.5-flash: ${err.message}`);
+      addLog("Provo fallback su 1.5-flash (v1)...");
+      result = await callGemini("gemini-1.5-flash", "v1");
     }
 
-    if (!image) throw new Error("Immagine mancante nella richiesta.");
-    addLog("Immagine ricevuta, dimensione: " + Math.round(image.length / 1024) + " KB");
+    const responseText = result.response.text();
+    if (testMode) {
+      addLog("Risposta ricevuta: " + responseText);
+      return res.status(200).json({ success: true, logs, debug: responseText });
+    }
 
-    // 1. Gemini
-    addLog("Chiamata a Gemini 2.5 Flash in corso...");
-    const base64Data = image.split(',')[1] || image;
-    
-    const prompt = `Agisci come un esperto trascrittore musicale specializzato nel formato ChordPro. 
-    Analizza l'immagine e restituisci ESCLUSIVAMENTE il codice ChordPro.
-    Titolo: ${userTitle}.
-    Restituisci SOLO il blocco di codice ChordPro, senza commenti.`;
+    const chordProContent = responseText.replace(/```chordpro|```/g, '').trim();
+    addLog("Contenuto ChordPro generato.");
 
-    const result = await model.generateContent([
-      { inlineData: { data: base64Data, mimeType: "image/jpeg" } },
-      { text: prompt }
-    ]);
-    
-    const chordProContent = result.response.text().replace(/```chordpro|```/g, '').trim();
-    addLog("Gemini ha generato il contenuto ChordPro con successo.");
-
-    // 2. GitHub
-    addLog("Connessione a GitHub in corso...");
+    addLog("Connessione a GitHub...");
     const octokit = new Octokit({ auth: GITHUB_TOKEN });
 
     const fileName = (userTitle || 'nuova-canzone')
@@ -69,8 +79,6 @@ export default async function handler(req, res) {
       .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
       .replace(/\s+/g, '-')
       .replace(/[^a-z0-9-]/g, '') + '.chordpro';
-
-    addLog(`Tentativo di creazione file: src/songs/${fileName}`);
 
     await octokit.repos.createOrUpdateFileContents({
       owner: REPO_OWNER,
@@ -80,11 +88,11 @@ export default async function handler(req, res) {
       content: Buffer.from(chordProContent).toString('base64'),
     });
 
-    addLog("File salvato correttamente nel repository GitHub.");
+    addLog("File salvato su GitHub!");
     return res.status(200).json({ success: true, fileName, logs });
 
   } catch (error) {
-    addLog("ERRORE CRITICO: " + error.message);
+    addLog("ERRORE: " + error.message);
     return res.status(500).json({ error: error.message, logs });
   }
 }
