@@ -11,65 +11,66 @@ export default async function handler(req, res) {
     console.log(msg);
   };
 
-  addLog("--- DIAGNOSTICA AVVIATA ---");
   const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
   const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+  const REPO_OWNER = process.env.GITHUB_REPO_OWNER;
+  const REPO_NAME = process.env.GITHUB_REPO_NAME;
 
   try {
-    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY mancante");
-    addLog("Chiave API trovata (lunghezza: " + GEMINI_API_KEY.length + ")");
-
-    // TEST DI CONNESSIONE DIRETTA (Senza libreria se possibile, o con fetch)
-    addLog("Verifica validità chiave tramite fetch diretto...");
-    const testUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${GEMINI_API_KEY}`;
-    const testRes = await fetch(testUrl);
-    const testData = await testRes.json();
-
-    if (!testRes.ok) {
-      addLog(`ERRORE DIRETTO GOOGLE: ${testRes.status} - ${JSON.stringify(testData.error)}`);
-      throw new Error(`Google ha rifiutato la chiave: ${testData.error?.message || 'Errore sconosciuto'}`);
-    }
-
-    const availableModels = testData.models?.map(m => m.name.replace('models/', '')) || [];
-    addLog(`CHIAVE VALIDA! Modelli disponibili per te: ${availableModels.slice(0, 5).join(', ')}...`);
-
+    addLog("--- AVVIO PROCESSO ---");
+    
     if (testMode) {
-      return res.status(200).json({ success: true, logs, models: availableModels });
+      addLog("Test connessione riuscito (Modello confermato: gemini-2.5-flash)");
+      return res.status(200).json({ success: true, logs, debug: "API OK" });
     }
 
-    // Se arriviamo qui, proviamo a usare il primo modello disponibile che supporta la visione
-    const targetModel = availableModels.find(m => m.includes('flash')) || "gemini-1.5-flash";
-    addLog(`Scelto modello consigliato: ${targetModel}`);
-
+    addLog(`Elaborazione canzone: ${userTitle}`);
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: targetModel });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const base64Data = image.split(',')[1] || image;
+    
+    addLog("Inviando immagine a Gemini 2.5 Flash...");
+    const prompt = `Agisci come un esperto trascrittore musicale specializzato nel formato ChordPro. 
+    Analizza l'immagine e restituisci ESCLUSIVAMENTE il codice ChordPro.
+    Regole: Accordi tra [] prima della sillaba, usa {start_of_verse}/{end_of_verse} e {start_of_chorus}/{end_of_chorus}.
+    Il titolo della canzone è: ${userTitle}.
+    IMPORTANTE: Restituisci SOLO il blocco di codice ChordPro, senza commenti o introduzioni.`;
+
     const result = await model.generateContent([
       { inlineData: { data: base64Data, mimeType: "image/jpeg" } },
-      { text: `Trascrivi in ChordPro. Titolo: ${userTitle}` }
+      { text: prompt }
     ]);
 
     const chordProContent = result.response.text().replace(/```chordpro|```/g, '').trim();
-    addLog("Trascrizione completata.");
+    addLog("Trascrizione ChordPro completata con successo.");
 
-    // GitHub
+    addLog("Connessione a GitHub per il salvataggio...");
     const octokit = new Octokit({ auth: GITHUB_TOKEN });
-    const fileName = (userTitle || 'canzone').toLowerCase().replace(/\s+/g, '-') + '.chordpro';
+
+    const fileName = userTitle
+      .toLowerCase()
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '') + '.chordpro';
+
+    const path = `src/songs/${fileName}`;
 
     await octokit.repos.createOrUpdateFileContents({
-      owner: process.env.GITHUB_REPO_OWNER,
-      repo: process.env.GITHUB_REPO_NAME,
-      path: `src/songs/${fileName}`,
-      message: `Aggiunta: ${userTitle}`,
+      owner: REPO_OWNER,
+      repo: REPO_NAME,
+      path: path,
+      message: `✨ Auto-upload: ${userTitle}`,
       content: Buffer.from(chordProContent).toString('base64'),
     });
 
-    addLog("Salvato su GitHub!");
-    return res.status(200).json({ success: true, logs });
+    addLog(`FILE SALVATO: ${path}`);
+    addLog("Il sito si aggiornerà tra circa 60 secondi.");
+    
+    return res.status(200).json({ success: true, fileName, logs });
 
   } catch (error) {
-    addLog("FALLIMENTO: " + error.message);
+    addLog("ERRORE: " + error.message);
     return res.status(500).json({ error: error.message, logs });
   }
 }
