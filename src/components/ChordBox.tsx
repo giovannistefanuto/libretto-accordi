@@ -8,8 +8,22 @@ interface ChordBoxProps {
   chordName: string;
 }
 
+// Sostituiamo il componente Chord se dovesse fallire
+const SafeChord = (props: any) => {
+  try {
+    // Verifichiamo che Chord sia una funzione/componente valido
+    if (typeof Chord !== 'function' && typeof Chord !== 'object') {
+      console.error("Libreria Chord non caricata correttamente");
+      return <div style={{ color: 'red', fontSize: '10px' }}>Errore caricamento libreria</div>;
+    }
+    return <Chord {...props} />;
+  } catch (e) {
+    console.error("Errore rendering accordo:", e);
+    return <div style={{ color: 'red', fontSize: '10px' }}>Errore visualizzazione</div>;
+  }
+};
+
 const ChordBox: React.FC<ChordBoxProps> = ({ chordName }) => {
-  // Database di fallback semplificato per emergenze
   const fallbackDb: any = {
     'C': { frets: [0, 3, 2, 0, 1, 0], fingers: [0, 3, 2, 0, 1, 0] },
     'D': { frets: [-1, -1, 0, 2, 3, 2], fingers: [0, 0, 0, 1, 3, 2] },
@@ -24,27 +38,22 @@ const ChordBox: React.FC<ChordBoxProps> = ({ chordName }) => {
   };
 
   const findChordData = (name: string) => {
-    // 1. Normalizzazione nomi italiani -> internazionali
     let cleanName = name
       .replace(/Do/g, 'C').replace(/Re/g, 'D').replace(/Mi/g, 'E')
       .replace(/Fa/g, 'F').replace(/Sol/g, 'G').replace(/La/g, 'A').replace(/Si/g, 'B');
     
-    // 2. Normalizzazione simboli
     cleanName = cleanName
       .replace(/-/g, 'm')
       .replace(/min/g, 'm')
       .replace(/Δ/g, 'maj7')
-      .replace(/#/g, 'sharp') // Il DB usa 'sharp' invece di '#'
-      .replace(/b/g, 'flat');  // Il DB usa 'flat' invece di 'b'
+      .replace(/#/g, 'sharp')
+      .replace(/b/g, 'flat');
 
-    // 3. Gestione del basso (es: C/G -> C)
     const baseName = cleanName.split('/')[0].trim();
 
-    // 4. Ricerca nel DB chords-db (struttura: guitarData.chords[key])
     try {
-      // Estraiamo la nota base (C, Csharp, D, etc.)
       const keyMatch = baseName.match(/^([A-G](sharp|flat)?)/);
-      if (keyMatch) {
+      if (keyMatch && guitarData && guitarData.chords) {
         const key = keyMatch[0];
         const suffix = baseName.replace(key, '') || 'major';
         const formattedSuffix = suffix === 'm' ? 'minor' : suffix;
@@ -72,7 +81,6 @@ const ChordBox: React.FC<ChordBoxProps> = ({ chordName }) => {
       console.warn("Errore ricerca DB:", e);
     }
 
-    // 5. Fallback finale
     const simpleKey = baseName.charAt(0);
     const isMinor = baseName.includes('m');
     const fallbackKey = isMinor ? `${simpleKey}m` : simpleKey;
@@ -108,8 +116,18 @@ const ChordBox: React.FC<ChordBoxProps> = ({ chordName }) => {
   };
 
   return (
-    <div style={{ width: '150px', height: '180px', background: '#fff', borderRadius: '8px', padding: '10px' }}>
-      <Chord
+    <div 
+      onClick={(e) => e.stopPropagation()} // Importante per non chiudere il tooltip cliccandoci sopra
+      style={{ 
+        width: '150px', 
+        height: '180px', 
+        background: '#fff', 
+        borderRadius: '8px', 
+        padding: '10px',
+        boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+      }}
+    >
+      <SafeChord
         chord={MyChord}
         instrument={instrument}
         lite={false}
