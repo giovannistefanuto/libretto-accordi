@@ -13,7 +13,6 @@
     "@google/generative-ai": "^0.24.1",
     "@octokit/rest": "^22.0.1",
     "@tombatossals/chords-db": "^0.5.1",
-    "@tombatossals/react-chords": "^0.2.10",
     "chordsheetjs": "^14.5.1",
     "lucide-react": "^1.14.0",
     "react": "^19.2.5",
