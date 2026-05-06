@@ -40,6 +40,14 @@ export default async function handler(req, res) {
     addLog(`Elaborazione canzone: ${userTitle} (${imagesList.length} immagini)`);
     let chordProContent = null;
 
+    // Gerarchia Modelli (Rollout richiesto)
+    const modelsPriority = [
+      "gemini-3.1-pro-preview",
+      "gemini-3-flash-preview",
+      "gemini-3.1-flash-lite-preview",
+      "gemini-2.5-flash"
+    ];
+
     // Preparazione dati multimediali per Gemini
     const mediaParts = imagesList.map(img => ({
       inlineData: {
@@ -48,17 +56,18 @@ export default async function handler(req, res) {
       }
     }));
 
-    // --- LOGICA DI RETRY E ROTAZIONE CHIAVI (Ottimizzata per Vercel Hobby 10s timeout) ---
+    // --- LOGICA DI ROLLOUT E ROTAZIONE CHIAVI ---
     for (let k = 0; k < geminiKeys.length; k++) {
       const currentKey = geminiKeys[k];
       const keyLabel = `Chiave ${k + 1}`;
+      let keyHasAuthError = false;
       
-      for (let attempt = 1; attempt <= 2; attempt++) {
+      for (const modelName of modelsPriority) {
         try {
-          addLog(`${keyLabel} - Tentativo ${attempt}/2...`);
+          addLog(`${keyLabel} - Provando ${modelName}...`);
           
           const genAI = new GoogleGenerativeAI(currentKey);
-          const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+          const model = genAI.getGenerativeModel({ model: modelName });
 
           const prompt = `Agisci come un esperto trascrittore musicale specializzato nel formato ChordPro. 
           Analizza le immagini fornite (possono essere più pagine della stessa canzone) e restituisci un UNICO codice ChordPro che le unisca in ordine.
@@ -81,22 +90,30 @@ export default async function handler(req, res) {
             { text: prompt }
           ]);
 
-          chordProContent = result.response.text().replace(/```chordpro|```/g, '').trim();
+          const responseText = result.response.text();
+          chordProContent = responseText.replace(/```chordpro|```/g, '').trim();
           
           if (chordProContent) {
-            addLog(`Trascrizione completata con successo.`);
+            addLog(`Trascrizione completata con ${modelName}.`);
             break; 
           }
         } catch (err) {
-          addLog(`Errore ${keyLabel}: ${err.message.substring(0, 50)}...`);
-          if (attempt < 2) {
-            addLog("Retry rapido (1s)...");
-            await sleep(1000); // Attesa minima
+          const errMsg = err.message.toLowerCase();
+          addLog(`${modelName} KO: ${err.message.substring(0, 40)}...`);
+          
+          // Se la chiave è invalida o scaduta, passiamo subito alla chiave successiva
+          if (errMsg.includes("api_key_invalid") || errMsg.includes("not found") || errMsg.includes("expired")) {
+            keyHasAuthError = true;
+            break; 
           }
+          // Altrimenti prosegue con il prossimo modello nella gerarchia
         }
       }
 
-      if (chordProContent) break;
+      if (chordProContent || keyHasAuthError) {
+        if (chordProContent) break;
+        addLog(`Passaggio alla chiave successiva causa errore critico.`);
+      }
     }
 
     if (!chordProContent) {
