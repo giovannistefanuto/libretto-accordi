@@ -76,6 +76,7 @@ export default async function handler(req, res) {
           2. MAPPATURA SPAZIALE: Gli accordi nell'immagine sono posizionati SOPRA il testo. In ChordPro, devi inserire l'accordo tra parentesi quadre [X] ESATTAMENTE prima del carattere o della sillaba che si trova verticalmente sotto l'accordo nell'immagine. Se un accordo è a metà parola, mettilo a metà parola.
           3. NOTAZIONE: Usa solo la notazione internazionale (A, B, C, D, E, F, G). Converti istantaneamente Do->C, Re->D, Mi->E, Fa->F, Sol->G, La->A, Si->B.
           4. ORDINE: Se ci sono più immagini, sono pagine consecutive. Uniscile in un unico flusso coerente.
+          5. PROCEDURA RIGA PER RIGA: Elabora il documento rigorosamente una riga alla volta dall'alto verso il basso. Per ogni riga di testo, verifica il numero esatto di accordi presenti sopra di essa nell'immagine. Assicurati che il numero di accordi nel tuo output ChordPro corrisponda esattamente al numero di accordi visibili su quella riga, senza omissioni.
 
           TAG OBBLIGATORI:
           - {title: ${userTitle}}
