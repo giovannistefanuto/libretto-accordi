@@ -219,10 +219,10 @@ const UploadPage: React.FC = () => {
             <Camera size={20} /> Come fare? È semplicissimo:
           </h4>
           <ul style={{ margin: 0, paddingLeft: '0', listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-            <li style={{ display: 'flex', gap: '0.5rem' }}><strong>1.</strong> Scrivi il titolo della canzone qui sotto.</li>
-            <li style={{ display: 'flex', gap: '0.5rem' }}><strong>2.</strong> Clicca sul riquadro tratteggiato e scatta una foto nitida al foglio.</li>
-            <li style={{ display: 'flex', gap: '0.5rem' }}><strong>3.</strong> Clicca "Crea Canzone": il sistema leggerà la foto per te.</li>
-            <li style={{ display: 'flex', gap: '0.5rem' }}><strong>4.</strong> Attendi un minuto: la canzone apparirà magicamente nell'elenco!</li>
+            <li style={{ display: 'flex', gap: '0.5rem' }}><strong>1.</strong> Scrivi il titolo della canzone.</li>
+            <li style={{ display: 'flex', gap: '0.5rem' }}><strong>2.</strong> Clicca sul riquadro tratteggiato e scatta una foto nitida al foglio (se servono, 2 foto).</li>
+            <li style={{ display: 'flex', gap: '0.5rem' }}><strong>3.</strong> Clicca "Crea Canzone".</li>
+            <li style={{ display: 'flex', gap: '0.5rem' }}><strong>4.</strong> Attendi uno o due minuti: la canzone apparirà nell'elenco!</li>
           </ul>
         </div>
 
