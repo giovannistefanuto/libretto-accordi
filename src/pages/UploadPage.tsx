@@ -60,14 +60,16 @@ const UploadPage: React.FC = () => {
         const img = new Image();
         img.src = e.target?.result as string;
         img.onload = () => {
-        // Calcoliamo il peso stimato. 
-        // Per la massima precisione degli accordi, alziamo la risoluzione a 2500px.
-        const estimatedTotalSize = currentImages.reduce((acc, img) => acc + img.length, 0) + file.size;
+        // Calcoliamo il peso stimato in byte reali.
+        // Un carattere base64 rappresenta circa 0.75 byte.
+        const currentBytes = currentImages.reduce((acc, img) => acc + (img.length * 0.75), 0);
+        const estimatedTotalSize = currentBytes + file.size;
 
-        // Limite Vercel 4.5MB. Stiamo cauti a 3.5MB per il payload base64.
-        const isTooLarge = estimatedTotalSize > 3500000; 
+        // Limite Vercel 4.5MB. Stiamo cauti a 3.8MB per il payload totale.
+        const isTooLarge = estimatedTotalSize > 3800000; 
 
         const canvas = document.createElement('canvas');
+        // Per la massima precisione degli accordi, usiamo 2500px (o 2000px se il file è troppo grande)
         const MAX_SIZE = isTooLarge ? 2000 : 2500; 
         let width = img.width;
         let height = img.height;
@@ -89,9 +91,9 @@ const UploadPage: React.FC = () => {
         const ctx = canvas.getContext('2d');
         ctx?.drawImage(img, 0, 0, width, height);
 
-        // Manteniamo la qualità al 90% per non perdere i dettagli degli accordi piccoli
-        const quality = isTooLarge ? 0.8 : 0.9;
-        resolve(canvas.toDataURL('image/jpeg', quality));
+        // Usiamo PNG invece di JPEG: è lossless e preserva la nitidezza di testo e accordi piccoli.
+        // Ottimo per l'OCR di Gemini.
+        resolve(canvas.toDataURL('image/png'));
         };      };
       reader.readAsDataURL(file);
     });

@@ -39,5 +39,12 @@ Questo file contiene il riepilogo delle modifiche e delle nuove funzionalità im
 *   **Git Revert:** Gestito con successo il ripristino di una versione precedente dell'API su richiesta, mantenendo però i miglioramenti al prompt e alla stabilità.
 *   **Error Logging:** Potenziato il terminale di log nell'app per mostrare errori critici in rosso e messaggi di successo in verde.
 
+## 3. 🚀 Ottimizzazione OCR & Stabilità (Fix Post-Analisi)
+*   **Passaggio a PNG:** Sostituito il formato JPEG con **PNG (lossless)** per l'invio delle immagini a Gemini. Questo elimina gli artefatti di compressione e rende i testi/accordi piccoli molto più nitidi per l'AI.
+*   **Calcolo Dimensioni Accurato:** Corretto il bug nella stima del peso del payload (ora calcola correttamente i byte dal base64), garantendo di rimanere sempre sotto il limite di 4.5MB di Vercel senza sacrificare troppo la risoluzione.
+*   **MimeType Dinamico:** L'API ora rileva automaticamente se l'immagine è PNG o JPEG dall'header base64, evitando errori di parsing lato Gemini.
+*   **Retry Intelligente:** Implementato un sistema di **retry automatico (5s di attesa)** in caso di errori di "Rate Limit" (429) o quota esaurita sui modelli preview.
+*   **Prompt Muscolare:** Affinate le istruzioni per la conversione della notazione (Do->C, Re->D...) per renderle meno ambigue per il modello.
+
 ---
-*Log generato il 5 Maggio 2026*
+*Log generato il 6 Maggio 2026*
