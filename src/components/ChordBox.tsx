@@ -1,25 +1,24 @@
 import React from 'react';
 // @ts-ignore
-import Chord from '@tombatossals/react-chords/lib/Chord';
+import ChordImport from '@tombatossals/react-chords/lib/Chord';
 // @ts-ignore
 import guitarData from '@tombatossals/chords-db/lib/guitar.json';
+
+// Gestione robusta dell'importazione (Vite/ESM vs CommonJS)
+const Chord = (ChordImport as any).default || ChordImport;
 
 interface ChordBoxProps {
   chordName: string;
 }
 
-// Sostituiamo il componente Chord se dovesse fallire
 const SafeChord = (props: any) => {
   try {
-    // Verifichiamo che Chord sia una funzione/componente valido
-    if (typeof Chord !== 'function' && typeof Chord !== 'object') {
-      console.error("Libreria Chord non caricata correttamente");
-      return <div style={{ color: 'red', fontSize: '10px' }}>Errore caricamento libreria</div>;
+    if (!Chord || (typeof Chord !== 'function' && typeof Chord !== 'object')) {
+      return <div style={{ color: 'red', fontSize: '10px' }}>Libreria non pronta</div>;
     }
     return <Chord {...props} />;
   } catch (e) {
-    console.error("Errore rendering accordo:", e);
-    return <div style={{ color: 'red', fontSize: '10px' }}>Errore visualizzazione</div>;
+    return <div style={{ color: 'red', fontSize: '10px' }}>Errore rendering</div>;
   }
 };
 
@@ -43,17 +42,13 @@ const ChordBox: React.FC<ChordBoxProps> = ({ chordName }) => {
       .replace(/Fa/g, 'F').replace(/Sol/g, 'G').replace(/La/g, 'A').replace(/Si/g, 'B');
     
     cleanName = cleanName
-      .replace(/-/g, 'm')
-      .replace(/min/g, 'm')
-      .replace(/Δ/g, 'maj7')
-      .replace(/#/g, 'sharp')
-      .replace(/b/g, 'flat');
+      .replace(/-/g, 'm').replace(/min/g, 'm').replace(/Δ/g, 'maj7').replace(/#/g, 'sharp').replace(/b/g, 'flat');
 
     const baseName = cleanName.split('/')[0].trim();
 
     try {
       const keyMatch = baseName.match(/^([A-G](sharp|flat)?)/);
-      if (keyMatch && guitarData && guitarData.chords) {
+      if (keyMatch && guitarData?.chords) {
         const key = keyMatch[0];
         const suffix = baseName.replace(key, '') || 'major';
         const formattedSuffix = suffix === 'm' ? 'minor' : suffix;
@@ -65,7 +60,7 @@ const ChordBox: React.FC<ChordBoxProps> = ({ chordName }) => {
             (formattedSuffix === 'major' && c.suffix === '')
           );
 
-          if (chordMatch && chordMatch.positions && chordMatch.positions.length > 0) {
+          if (chordMatch?.positions?.length > 0) {
             const pos = chordMatch.positions[0];
             return {
               frets: pos.frets,
@@ -77,59 +72,46 @@ const ChordBox: React.FC<ChordBoxProps> = ({ chordName }) => {
           }
         }
       }
-    } catch (e) {
-      console.warn("Errore ricerca DB:", e);
-    }
+    } catch (e) {}
 
     const simpleKey = baseName.charAt(0);
     const isMinor = baseName.includes('m');
-    const fallbackKey = isMinor ? `${simpleKey}m` : simpleKey;
-    const fallback = fallbackDb[fallbackKey] || fallbackDb['C'];
-    
-    return {
-      frets: fallback.frets,
-      fingers: fallback.fingers || [],
-      barres: fallback.barres || [],
-      capo: false,
-      baseFret: 1
-    };
+    const fallback = fallbackDb[isMinor ? `${simpleKey}m` : simpleKey] || fallbackDb['C'];
+    return { ...fallback, capo: false, baseFret: 1 };
   };
 
   const chordData = findChordData(chordName);
 
-  const MyChord = {
-    frets: chordData.frets,
-    fingers: chordData.fingers,
-    barres: chordData.barres,
-    capo: chordData.capo,
-    baseFret: chordData.baseFret
-  };
-
-  const instrument = {
-    strings: 6,
-    fretsOnChord: 4,
-    name: 'Guitar',
-    keys: [],
-    tunings: {
-      standard: ['E', 'A', 'D', 'G', 'B', 'E']
-    }
-  };
-
   return (
     <div 
-      onClick={(e) => e.stopPropagation()} // Importante per non chiudere il tooltip cliccandoci sopra
+      onClick={(e) => e.stopPropagation()} 
       style={{ 
         width: '150px', 
         height: '180px', 
         background: '#fff', 
         borderRadius: '8px', 
         padding: '10px',
-        boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+        boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center'
       }}
     >
       <SafeChord
-        chord={MyChord}
-        instrument={instrument}
+        chord={{
+          frets: chordData.frets,
+          fingers: chordData.fingers,
+          barres: chordData.barres,
+          capo: chordData.capo,
+          baseFret: chordData.baseFret
+        }}
+        instrument={{
+          strings: 6,
+          fretsOnChord: 4,
+          name: 'Guitar',
+          keys: [],
+          tunings: { standard: ['E', 'A', 'D', 'G', 'B', 'E'] }
+        }}
         lite={false}
       />
       <div style={{ textAlign: 'center', color: '#333', marginTop: '5px', fontWeight: 'bold', fontSize: '14px' }}>

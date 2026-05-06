@@ -1,6 +1,29 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Component, ErrorInfo, ReactNode } from 'react';
 import ChordSheetJS from 'chordsheetjs';
 import ChordBox from './ChordBox';
+
+// Semplice Error Boundary per catturare i crash del tooltip
+class ChordErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(_: Error) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error("Chord Tooltip Crash:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <div style={{ background: 'white', color: 'red', padding: '10px', borderRadius: '8px', fontSize: '12px' }}>Errore nel diagramma</div>;
+    }
+    return this.props.children;
+  }
+}
 
 interface SongViewerProps {
   chordProData: string;
@@ -14,7 +37,6 @@ const SongViewer: React.FC<SongViewerProps> = ({ chordProData, transpose, fontSi
   const parser = new ChordSheetJS.ChordProParser();
   const song = parser.parse(chordProData);
   
-  // Applichiamo la trasposizione se necessaria
   let transposedSong = song;
   if (transpose !== 0) {
     try {
@@ -24,7 +46,6 @@ const SongViewer: React.FC<SongViewerProps> = ({ chordProData, transpose, fontSi
     }
   }
 
-  // Chiudi il tooltip quando si clicca altrove
   useEffect(() => {
     const handleClickOutside = () => setActiveChord(null);
     if (activeChord) {
@@ -34,17 +55,20 @@ const SongViewer: React.FC<SongViewerProps> = ({ chordProData, transpose, fontSi
   }, [activeChord]);
 
   const handleChordClick = (e: React.MouseEvent, chordName: string) => {
-    e.stopPropagation(); // Evita la chiusura immediata del tooltip
+    e.stopPropagation();
     
-    // Calcoliamo la posizione per il tooltip
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
-    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    // IMPORTANTE: Calcoliamo la posizione relativa al container .song-viewer
+    // perché il container ha position: relative
+    const container = e.currentTarget.closest('.song-viewer') as HTMLElement;
+    if (!container) return;
+
+    const containerRect = container.getBoundingClientRect();
+    const chordRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     
     setActiveChord({
       name: chordName,
-      x: rect.left + scrollLeft + rect.width / 2,
-      y: rect.top + scrollTop - 10
+      x: chordRect.left - containerRect.left + chordRect.width / 2,
+      y: chordRect.top - containerRect.top - 10
     });
   };
 
@@ -52,22 +76,8 @@ const SongViewer: React.FC<SongViewerProps> = ({ chordProData, transpose, fontSi
     <div className="song-viewer" style={{ fontSize: `${fontSize}rem`, position: 'relative' }}>
       <h1>{song.title}</h1>
       {song.artist && <h2 style={{ fontSize: '0.8em', opacity: 0.7, marginBottom: '0.5rem' }}>{song.artist}</h2>}
-      {song.metadata.getSingleMetadataValue('capo') && (
-        <div style={{ 
-          display: 'inline-block', 
-          background: 'rgba(37, 99, 235, 0.1)', 
-          color: 'var(--chord-color)', 
-          padding: '0.2rem 0.6rem', 
-          borderRadius: '4px', 
-          fontSize: '0.7em', 
-          fontWeight: 'bold',
-          marginBottom: '1rem' 
-        }}>
-          CAPOTASTO: {song.metadata.getSingleMetadataValue('capo')}° TASTO
-        </div>
-      )}
       
-      {/* Tooltip per l'accordo */}
+      {/* Tooltip con Error Boundary */}
       {activeChord && (
         <div 
           style={{ 
@@ -77,11 +87,13 @@ const SongViewer: React.FC<SongViewerProps> = ({ chordProData, transpose, fontSi
             transform: 'translate(-50%, -100%)',
             zIndex: 1000,
             filter: 'drop-shadow(0 10px 15px rgba(0,0,0,0.5))',
-            pointerEvents: 'none' // Evita interferenze con il mouse
+            pointerEvents: 'auto' // Permettiamo l'interazione
           }}
         >
-          <ChordBox chordName={activeChord.name} />
-          {/* Triangolino sotto il fumetto */}
+          <ChordErrorBoundary>
+            <ChordBox chordName={activeChord.name} />
+          </ChordErrorBoundary>
+          
           <div style={{
             width: 0,
             height: 0,
@@ -109,7 +121,9 @@ const SongViewer: React.FC<SongViewerProps> = ({ chordProData, transpose, fontSi
                             cursor: 'pointer', 
                             color: 'var(--chord-color)',
                             fontWeight: 'bold',
-                            padding: '0 2px'
+                            padding: '0 4px',
+                            borderRadius: '4px',
+                            background: activeChord?.name === item.chords ? 'rgba(37, 99, 235, 0.1)' : 'transparent'
                           }}
                         >
                           {item.chords}
