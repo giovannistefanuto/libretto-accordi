@@ -2,14 +2,14 @@ import React from 'react';
 // @ts-ignore
 import Chord from '@tombatossals/react-chords/lib/Chord';
 // @ts-ignore
-import guitarDb from 'guitar-chord-definitions';
+import guitarData from '@tombatossals/chords-db/lib/guitar.json';
 
 interface ChordBoxProps {
   chordName: string;
 }
 
 const ChordBox: React.FC<ChordBoxProps> = ({ chordName }) => {
-  // Database di fallback semplificato
+  // Database di fallback semplificato per emergenze
   const fallbackDb: any = {
     'C': { frets: [0, 3, 2, 0, 1, 0], fingers: [0, 3, 2, 0, 1, 0] },
     'D': { frets: [-1, -1, 0, 2, 3, 2], fingers: [0, 0, 0, 1, 3, 2] },
@@ -23,57 +23,67 @@ const ChordBox: React.FC<ChordBoxProps> = ({ chordName }) => {
     'Dm': { frets: [-1, -1, 0, 2, 3, 1], fingers: [0, 0, 0, 2, 3, 1] },
   };
 
-  // Funzione per cercare nel database professionale
   const findChordData = (name: string) => {
-    // 1. Normalizzazione dei nomi italiani -> internazionali
+    // 1. Normalizzazione nomi italiani -> internazionali
     let cleanName = name
       .replace(/Do/g, 'C').replace(/Re/g, 'D').replace(/Mi/g, 'E')
       .replace(/Fa/g, 'F').replace(/Sol/g, 'G').replace(/La/g, 'A').replace(/Si/g, 'B');
     
-    // 2. Normalizzazione simboli (es: - -> m, min -> m, Δ -> maj7)
+    // 2. Normalizzazione simboli
     cleanName = cleanName
       .replace(/-/g, 'm')
       .replace(/min/g, 'm')
-      .replace(/maj/g, 'maj')
       .replace(/Δ/g, 'maj7')
-      .replace(/#/g, '#')
-      .replace(/b/g, 'b');
+      .replace(/#/g, 'sharp') // Il DB usa 'sharp' invece di '#'
+      .replace(/b/g, 'flat');  // Il DB usa 'flat' invece di 'b'
 
     // 3. Gestione del basso (es: C/G -> C)
     const baseName = cleanName.split('/')[0].trim();
 
-    // 4. Ricerca nel database professionale
+    // 4. Ricerca nel DB chords-db (struttura: guitarData.chords[key])
     try {
-      // Cerchiamo una corrispondenza esatta
-      let dbMatch = guitarDb.find((c: any) => c.name.toLowerCase() === baseName.toLowerCase());
-      
-      // Se non trovato, proviamo a cercare una variante (es: C7 invece di C 7)
-      if (!dbMatch) {
-        dbMatch = guitarDb.find((c: any) => c.name.replace(/\s+/g, '').toLowerCase() === baseName.toLowerCase());
-      }
+      // Estraiamo la nota base (C, Csharp, D, etc.)
+      const keyMatch = baseName.match(/^([A-G](sharp|flat)?)/);
+      if (keyMatch) {
+        const key = keyMatch[0];
+        const suffix = baseName.replace(key, '') || 'major';
+        const formattedSuffix = suffix === 'm' ? 'minor' : suffix;
 
-      if (dbMatch && dbMatch.shapes && dbMatch.shapes.length > 0) {
-        const shape = dbMatch.shapes[0];
-        return {
-          frets: shape.frets,
-          fingers: shape.fingers || [],
-          barres: shape.barres || [],
-          capo: shape.capo || false
-        };
+        const keyChords = (guitarData.chords as any)[key];
+        if (keyChords) {
+          const chordMatch = keyChords.find((c: any) => 
+            c.suffix.toLowerCase() === formattedSuffix.toLowerCase() ||
+            (formattedSuffix === 'major' && c.suffix === '')
+          );
+
+          if (chordMatch && chordMatch.positions && chordMatch.positions.length > 0) {
+            const pos = chordMatch.positions[0];
+            return {
+              frets: pos.frets,
+              fingers: pos.fingers || [],
+              barres: pos.barres || [],
+              capo: pos.capo || false,
+              baseFret: pos.baseFret || 1
+            };
+          }
+        }
       }
     } catch (e) {
-      console.warn("Errore nel DB accordi:", e);
+      console.warn("Errore ricerca DB:", e);
     }
 
-    // 5. Fallback sul DB interno o logica di base
-    const fallbackBase = baseName.replace(/7|maj|m|sus|add/g, '').split(' ')[0] || 'C';
-    const fallback = fallbackDb[baseName] || fallbackDb[fallbackBase] || fallbackDb['C'];
+    // 5. Fallback finale
+    const simpleKey = baseName.charAt(0);
+    const isMinor = baseName.includes('m');
+    const fallbackKey = isMinor ? `${simpleKey}m` : simpleKey;
+    const fallback = fallbackDb[fallbackKey] || fallbackDb['C'];
     
     return {
       frets: fallback.frets,
       fingers: fallback.fingers || [],
       barres: fallback.barres || [],
-      capo: fallback.capo || false
+      capo: false,
+      baseFret: 1
     };
   };
 
@@ -84,6 +94,7 @@ const ChordBox: React.FC<ChordBoxProps> = ({ chordName }) => {
     fingers: chordData.fingers,
     barres: chordData.barres,
     capo: chordData.capo,
+    baseFret: chordData.baseFret
   };
 
   const instrument = {
