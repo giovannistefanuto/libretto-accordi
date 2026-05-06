@@ -25,20 +25,35 @@ const ChordBox: React.FC<ChordBoxProps> = ({ chordName }) => {
 
   // Funzione per cercare nel database professionale
   const findChordData = (name: string) => {
-    // Normalizziamo il nome (es: Do -> C, Mi- -> Em)
+    // 1. Normalizzazione dei nomi italiani -> internazionali
     let cleanName = name
-      .replace('Do', 'C').replace('Re', 'D').replace('Mi', 'E')
-      .replace('Fa', 'F').replace('Sol', 'G').replace('La', 'A').replace('Si', 'B')
-      .replace('-', 'm').replace('min', 'm');
+      .replace(/Do/g, 'C').replace(/Re/g, 'D').replace(/Mi/g, 'E')
+      .replace(/Fa/g, 'F').replace(/Sol/g, 'G').replace(/La/g, 'A').replace(/Si/g, 'B');
     
-    // Rimuoviamo il basso (C/G -> C)
-    const baseName = cleanName.split('/')[0];
+    // 2. Normalizzazione simboli (es: - -> m, min -> m, Δ -> maj7)
+    cleanName = cleanName
+      .replace(/-/g, 'm')
+      .replace(/min/g, 'm')
+      .replace(/maj/g, 'maj')
+      .replace(/Δ/g, 'maj7')
+      .replace(/#/g, '#')
+      .replace(/b/g, 'b');
 
-    // Proviamo a cercare nel database guitar-chord-definitions
+    // 3. Gestione del basso (es: C/G -> C)
+    const baseName = cleanName.split('/')[0].trim();
+
+    // 4. Ricerca nel database professionale
     try {
-      const dbMatch = guitarDb.find((c: any) => c.name === baseName || c.name === baseName.toUpperCase());
+      // Cerchiamo una corrispondenza esatta
+      let dbMatch = guitarDb.find((c: any) => c.name.toLowerCase() === baseName.toLowerCase());
+      
+      // Se non trovato, proviamo a cercare una variante (es: C7 invece di C 7)
+      if (!dbMatch) {
+        dbMatch = guitarDb.find((c: any) => c.name.replace(/\s+/g, '').toLowerCase() === baseName.toLowerCase());
+      }
+
       if (dbMatch && dbMatch.shapes && dbMatch.shapes.length > 0) {
-        const shape = dbMatch.shapes[0]; // Prendiamo la prima posizione (solitamente la più comune)
+        const shape = dbMatch.shapes[0];
         return {
           frets: shape.frets,
           fingers: shape.fingers || [],
@@ -50,8 +65,10 @@ const ChordBox: React.FC<ChordBoxProps> = ({ chordName }) => {
       console.warn("Errore nel DB accordi:", e);
     }
 
-    // Fallback sul DB interno se non trovato
-    const fallback = fallbackDb[baseName] || fallbackDb['C'];
+    // 5. Fallback sul DB interno o logica di base
+    const fallbackBase = baseName.replace(/7|maj|m|sus|add/g, '').split(' ')[0] || 'C';
+    const fallback = fallbackDb[baseName] || fallbackDb[fallbackBase] || fallbackDb['C'];
+    
     return {
       frets: fallback.frets,
       fingers: fallback.fingers || [],
