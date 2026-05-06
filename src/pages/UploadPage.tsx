@@ -1,13 +1,57 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Camera, Upload, Loader2, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Camera, Upload, Loader2, CheckCircle2, Music } from 'lucide-react';
 
 const UploadPage: React.FC = () => {
   const navigate = useNavigate();
+  const [password, setPassword] = useState('');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [title, setTitle] = useState('');
   const [images, setImages] = useState<string[]>([]);
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [logs, setLogs] = useState<string[]>([]);
+
+  const handlePasswordSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (password === 'gio') {
+      setIsAuthenticated(true);
+    } else {
+      alert('Password errata');
+      setPassword('');
+    }
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '80vh' }}>
+        <div className="song-container" style={{ textAlign: 'center', width: '100%', maxWidth: '400px' }}>
+          <Music size={48} color="var(--chord-color)" style={{ marginBottom: '1.5rem' }} />
+          <h2>Area Riservata</h2>
+          <p style={{ opacity: 0.7, marginBottom: '2rem' }}>Inserisci la password per aggiungere nuove canzoni.</p>
+          
+          <form onSubmit={handlePasswordSubmit}>
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="search-input"
+              style={{ marginBottom: '1.5rem', textAlign: 'center' }}
+              autoFocus
+            />
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <button type="button" onClick={() => navigate('/')} style={{ flex: 1, background: 'transparent', border: '1px solid #333' }}>
+                Annulla
+              </button>
+              <button type="submit" style={{ flex: 2, justifyContent: 'center' }}>
+                Accedi
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   const processImage = (file: File, currentImages: string[]): Promise<string> => {
     return new Promise((resolve) => {
@@ -115,18 +159,77 @@ const UploadPage: React.FC = () => {
   };
 
   return (
-    <div className="container">
-      <button className="back-button" onClick={() => navigate('/')}>
-        <ArrowLeft size={20} /> Torna all'Indice
-      </button>
+    <div className="container" style={{ paddingBottom: '5rem' }}>
+      <header className="home-header">
+        <h1>Aggiungi Brano</h1>
+        <p>Digitalizza il tuo libretto fisico</p>
+      </header>
+
+      <nav style={{ 
+        display: 'flex', 
+        gap: '0.5rem', 
+        marginBottom: '2rem',
+        background: 'rgba(255,255,255,0.03)',
+        padding: '0.5rem',
+        borderRadius: '12px',
+        border: '1px solid rgba(255,255,255,0.05)'
+      }}>
+        <Link to="/" style={{ flex: 1, textDecoration: 'none' }}>
+          <button style={{ 
+            width: '100%',
+            background: 'transparent', 
+            border: 'none',
+            borderRadius: '8px',
+            padding: '0.75rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.5rem',
+            color: 'var(--text-color)',
+            opacity: 0.7
+          }}>
+            <Search size={18} /> Cerca
+          </button>
+        </Link>
+        <button style={{ 
+          flex: 1, 
+          background: 'var(--chord-color)', 
+          borderRadius: '8px',
+          padding: '0.75rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '0.5rem'
+        }}>
+          <PlusCircle size={18} /> Aggiungi
+        </button>
+      </nav>
 
       <div className="song-container">
-        <h2 style={{ textAlign: 'center' }}>Aggiungi Canzone</h2>
-        
+        {/* GUIDA USABILITÀ */}
+        <div style={{ 
+          background: 'rgba(37, 99, 235, 0.1)', 
+          padding: '1rem', 
+          borderRadius: '12px', 
+          marginBottom: '2rem',
+          border: '1px solid rgba(37, 99, 235, 0.2)',
+          fontSize: '0.9rem'
+        }}>
+          <h4 style={{ margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Camera size={18} /> Come aggiungere una canzone?
+          </h4>
+          <ol style={{ margin: 0, paddingLeft: '1.2rem', opacity: 0.8, lineHeight: '1.4' }}>
+            <li>Inserisci il <strong>Titolo</strong> corretto.</li>
+            <li>Scatta una <strong>foto nitida</strong> del libretto (max 2 pagine).</li>
+            <li>Invia a <strong>Gemini</strong>: l'IA trascriverà testo e accordi.</li>
+            <li>Attendi 60s per il <strong>Deploy automatico</strong> su GitHub.</li>
+          </ol>
+        </div>
+
         <div style={{ marginBottom: '1.5rem' }}>
           <input
             type="text"
-            placeholder="Titolo della canzone"
+            placeholder="Esempio: Albachiara - Vasco Rossi"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             className="search-input"
@@ -176,7 +279,7 @@ const UploadPage: React.FC = () => {
                   }}
                 >
                   <Camera size={32} color="var(--chord-color)" />
-                  <span style={{ fontSize: '0.8rem' }}>{images.length === 0 ? 'Aggiungi foto' : 'Aggiungi seconda pagina'}</span>
+                  <span style={{ fontSize: '0.8rem' }}>{images.length === 0 ? 'Scatta Foto' : 'Aggiungi Pagina 2'}</span>
                 </label>
               )}
             </div>
@@ -198,7 +301,7 @@ const UploadPage: React.FC = () => {
             disabled={status === 'loading'}
             style={{ flex: 1, justifyContent: 'center', background: 'var(--header-bg)', color: 'var(--text-color)', border: '1px solid var(--text-color)' }}
           >
-            Test API
+            Test
           </button>
         </div>
 
@@ -218,7 +321,7 @@ const UploadPage: React.FC = () => {
             border: status === 'error' ? '1px solid #ff4444' : '1px solid #333'
           }}>
             <div style={{ borderBottom: '1px solid #333', marginBottom: '0.5rem', paddingBottom: '0.25rem', display: 'flex', justifyContent: 'space-between' }}>
-              <span>Console Log</span>
+              <span>Console Log (Sotto il cofano)</span>
               {status === 'loading' && <Loader2 className="animate-spin" size={14} />}
             </div>
             {logs.map((log, i) => (
@@ -228,7 +331,7 @@ const UploadPage: React.FC = () => {
             ))}
             {status === 'success' && (
               <div style={{ color: '#10b981', marginTop: '1rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <CheckCircle2 size={16} /> OPERAZIONE COMPLETATA CON SUCCESSO!
+                <CheckCircle2 size={16} /> TRASCRIZIONE COMPLETATA!
               </div>
             )}
           </div>

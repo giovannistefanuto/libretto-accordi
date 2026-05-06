@@ -67,28 +67,61 @@ const Home: React.FC = () => {
   }, [songs, searchTerm]);
 
   return (
-    <div className="container">
+    <div className="container" style={{ paddingBottom: '5rem' }}>
       <header className="home-header">
         <h1>Libretto Accordi</h1>
-        <p>Il tuo canzoniere digitale</p>
+        <p>Cerca tra i tuoi brani e suona ovunque</p>
       </header>
 
-      <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '2rem' }}>
-        <div className="search-container" style={{ margin: 0, flex: 1 }}>
-          <Search className="search-icon" size={20} />
-          <input 
-            type="text" 
-            placeholder="Cerca canzone..." 
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="search-input"
-          />
-        </div>
-        <Link to="/upload" style={{ textDecoration: 'none' }}>
-          <button style={{ borderRadius: '50px', padding: '0.75rem 1.5rem', whiteSpace: 'nowrap' }}>
-            <PlusCircle size={20} /> Aggiungi
+      <nav style={{ 
+        display: 'flex', 
+        gap: '0.5rem', 
+        marginBottom: '2rem',
+        background: 'rgba(255,255,255,0.03)',
+        padding: '0.5rem',
+        borderRadius: '12px',
+        border: '1px solid rgba(255,255,255,0.05)'
+      }}>
+        <button style={{ 
+          flex: 1, 
+          background: 'var(--chord-color)', 
+          borderRadius: '8px',
+          padding: '0.75rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '0.5rem'
+        }}>
+          <Search size={18} /> Cerca
+        </button>
+        <Link to="/upload" style={{ flex: 1, textDecoration: 'none' }}>
+          <button style={{ 
+            width: '100%',
+            background: 'transparent', 
+            border: 'none',
+            borderRadius: '8px',
+            padding: '0.75rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.5rem',
+            color: 'var(--text-color)',
+            opacity: 0.7
+          }}>
+            <PlusCircle size={18} /> Aggiungi
           </button>
         </Link>
+      </nav>
+
+      <div className="search-container" style={{ marginBottom: '2rem' }}>
+        <Search className="search-icon" size={20} />
+        <input 
+          type="text" 
+          placeholder="Titolo o artista..." 
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="search-input"
+        />
       </div>
 
       {/* MODAL ELIMINAZIONE */}

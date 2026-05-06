@@ -1,3 +1,17 @@
+# 🎸 Diario di Bordo: Aggiornamenti 6 Maggio 2026
+
+## 1. 🔐 Protezione Area Upload
+*   **Gate di Accesso:** Implementata una pagina di login per la sezione "Aggiungi Canzone".
+*   **Password Unificata:** Utilizzata la password **"gio"** per autorizzare il caricamento.
+
+## 2. 📱 Menu di Navigazione & UX
+*   **Navigazione a Schede:** Introdotto un menu superiore per passare rapidamente tra le modalità "Cerca" e "Aggiungi".
+*   **Guida Onboarding:** Aggiunta una sezione "Come Funziona" nella pagina di upload per guidare l'utente nel processo di scatto foto e invio a Gemini.
+*   **Visual Feedback:** Migliorati i placeholder e le etichette per rendere l'interfaccia più parlante (es. "Scatta Foto" invece di "Aggiungi Foto").
+*   **Log Preservation:** Mantenuo il terminale dei log per il monitoraggio tecnico, ma spostato in una sezione dedicata "Sotto il cofano".
+
+---
+
 # 🎸 Diario di Bordo: Aggiornamenti 5 Maggio 2026
 
 Questo file contiene il riepilogo delle modifiche e delle nuove funzionalità implementate nella sessione odierna.
