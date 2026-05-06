@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Camera, Upload, Loader2, CheckCircle2, Music } from 'lucide-react';
+import { ArrowLeft, Camera, Upload, Loader2, CheckCircle2, Music, PlusCircle } from 'lucide-react';
 
 const UploadPage: React.FC = () => {
   const navigate = useNavigate();
