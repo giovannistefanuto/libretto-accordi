@@ -40,12 +40,12 @@ export default async function handler(req, res) {
     addLog(`Elaborazione canzone: ${userTitle} (${imagesList.length} immagini)`);
     let chordProContent = null;
 
-    // Gerarchia Modelli (Rollout richiesto)
+    // Gerarchia Modelli Ottimizzata (Qualità Pro -> Velocità Flash)
     const modelsPriority = [
-      "gemini-3.1-pro-preview",
-      "gemini-3-flash-preview",
-      "gemini-3.1-flash-lite-preview",
-      "gemini-2.5-flash"
+      "gemini-3.1-pro-preview",     // Il top per ragionamento spaziale e OCR
+      "gemini-2.5-pro",             // Estremamente stabile e preciso
+      "gemini-3.1-flash-preview",   // Veloce, ottimo compromesso
+      "gemini-2.5-flash"            // La rete di sicurezza (affidabile e veloce)
     ];
 
     // Preparazione dati multimediali per Gemini con rilevamento dinamico del mimeType
