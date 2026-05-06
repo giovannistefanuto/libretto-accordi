@@ -69,8 +69,8 @@ const Home: React.FC = () => {
   return (
     <div className="container" style={{ paddingBottom: '5rem' }}>
       <header className="home-header">
-        <h1>Mio Canzoniere</h1>
-        <p>Tutte le tue canzoni preferite, pronte da suonare</p>
+        <h1>Libretto Canti Digitale</h1>
+        <p>Finalmente possiamo alzare/abbassare le tonalità senza Davide Camporese!</p>
       </header>
 
       <nav style={{ 
