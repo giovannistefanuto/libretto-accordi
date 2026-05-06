@@ -1,4 +1,5 @@
-import React, { useState, useEffect, Component, ErrorInfo, ReactNode } from 'react';
+import React, { useState, useEffect, Component } from 'react';
+import type { ErrorInfo, ReactNode } from 'react';
 import ChordSheetJS from 'chordsheetjs';
 import ChordBox from './ChordBox';
 
