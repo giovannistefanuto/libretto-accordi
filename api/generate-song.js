@@ -69,24 +69,22 @@ export default async function handler(req, res) {
           const genAI = new GoogleGenerativeAI(currentKey);
           const model = genAI.getGenerativeModel({ model: modelName });
 
-          const prompt = `Agisci come un esperto trascrittore musicale specializzato nel formato ChordPro. 
-          Analizza le immagini fornite (possono essere più pagine della stessa canzone) e restituisci un UNICO codice ChordPro che le unisca in ordine.
-          
-          REGOLE MANDATORIE PER GLI ACCORDI:
-          - Usa ESCLUSIVAMENTE la notazione internazionale: A, B, C, D, E, F, G.
-          - NON USARE MAI la notazione italiana (Do, Re, Mi, Fa, Sol, La, Si).
-          - Se nell'immagine trovi "Do", scrivi [C]. Se trovi "Re", scrivi [D], e così via.
-          - Gli accordi devono essere tra parentesi quadre [] e posizionati ESATTAMENTE prima della sillaba su cui cambiano.
+          const prompt = `Agisci come un trascrittore musicale infallibile. Il tuo compito è convertire l'immagine di uno spartito/testo in formato ChordPro con precisione chirurgica.
 
-          INFORMAZIONI EXTRA:
-          - Se nell'immagine vedi l'indicazione del "Capotasto" (es: "Capotasto al 2° tasto", "Capo 3", ecc.), inserisci il tag ChordPro standard {capo: N} all'inizio del file (dove N è il numero del tasto).
+          REGOLE DI FEDELTÀ ASSOLUTA:
+          1. NON USARE LA TUA MEMORIA: Non completare o correggere la canzone in base a come la conosci. Trascrivi SOLO ciò che vedi nell'immagine. Se un accordo manca nell'immagine, NON aggiungerlo.
+          2. MAPPATURA SPAZIALE: Gli accordi nell'immagine sono posizionati SOPRA il testo. In ChordPro, devi inserire l'accordo tra parentesi quadre [X] ESATTAMENTE prima del carattere o della sillaba che si trova verticalmente sotto l'accordo nell'immagine. Se un accordo è a metà parola, mettilo a metà parola.
+          3. NOTAZIONE: Usa solo la notazione internazionale (A, B, C, D, E, F, G). Converti istantaneamente Do->C, Re->D, Mi->E, Fa->F, Sol->G, La->A, Si->B.
+          4. ORDINE: Se ci sono più immagini, sono pagine consecutive. Uniscile in un unico flusso coerente.
 
-          STRUTTURA:
-          - Usa {start_of_verse}/{end_of_verse} per le strofe.
-          - Usa {start_of_chorus}/{end_of_chorus} per i ritornelli.
-          - Il titolo della canzone è: ${userTitle}.
+          TAG OBBLIGATORI:
+          - {title: ${userTitle}}
+          - {capo: N} (solo se esplicitamente scritto nell'immagine)
+          - {start_of_verse}/{end_of_verse} e {start_of_chorus}/{end_of_chorus} per dividere le sezioni.
 
-          IMPORTANTE: Restituisci SOLO il blocco di codice ChordPro, senza commenti, spiegazioni o introduzioni.`;
+          ERRORE DA EVITARE: Non inventare accordi. Se un rigo non ha accordi, non metterli. Se l'immagine è sfocata, scrivi ciò che riesci a leggere senza indovinare.
+
+          RISPOSTA: Restituisci SOLO il codice ChordPro puro.`;
 
           const result = await model.generateContent([
             ...mediaParts,

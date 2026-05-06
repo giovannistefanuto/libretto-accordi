@@ -60,42 +60,39 @@ const UploadPage: React.FC = () => {
         const img = new Image();
         img.src = e.target?.result as string;
         img.onload = () => {
-          // Calcoliamo il peso totale stimato in memoria (in byte)
-          // Un carattere base64 è circa 1 byte, ma qui ragioniamo sui file originali
-          const estimatedTotalSize = currentImages.reduce((acc, img) => acc + img.length, 0) + file.size;
-          
-          // Se siamo ampiamente sotto il limite di Vercel (4.5MB base64 -> ~3.3MB raw)
-          // Manteniamo una qualità altissima.
-          const isLarge = estimatedTotalSize > 3000000; 
-          
-          const canvas = document.createElement('canvas');
-          // Alziamo la risoluzione massima a 2000px per una precisione OCR superiore
-          const MAX_SIZE = isLarge ? 1600 : 2000; 
-          let width = img.width;
-          let height = img.height;
+        // Calcoliamo il peso stimato. 
+        // Per la massima precisione degli accordi, alziamo la risoluzione a 2500px.
+        const estimatedTotalSize = currentImages.reduce((acc, img) => acc + img.length, 0) + file.size;
 
-          if (width > height) {
-            if (width > MAX_SIZE) {
-              height *= MAX_SIZE / width;
-              width = MAX_SIZE;
-            }
-          } else {
-            if (height > MAX_SIZE) {
-              width *= MAX_SIZE / height;
-              height = MAX_SIZE;
-            }
+        // Limite Vercel 4.5MB. Stiamo cauti a 3.5MB per il payload base64.
+        const isTooLarge = estimatedTotalSize > 3500000; 
+
+        const canvas = document.createElement('canvas');
+        const MAX_SIZE = isTooLarge ? 2000 : 2500; 
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_SIZE) {
+            height *= MAX_SIZE / width;
+            width = MAX_SIZE;
           }
+        } else {
+          if (height > MAX_SIZE) {
+            width *= MAX_SIZE / height;
+            height = MAX_SIZE;
+          }
+        }
 
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx?.drawImage(img, 0, 0, width, height);
-          
-          // Qualità dinamica: 0.9 se c'è spazio, 0.7 solo se necessario
-          const quality = isLarge ? 0.7 : 0.9;
-          resolve(canvas.toDataURL('image/jpeg', quality));
-        };
-      };
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+
+        // Manteniamo la qualità al 90% per non perdere i dettagli degli accordi piccoli
+        const quality = isTooLarge ? 0.8 : 0.9;
+        resolve(canvas.toDataURL('image/jpeg', quality));
+        };      };
       reader.readAsDataURL(file);
     });
   };
