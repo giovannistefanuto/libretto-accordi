@@ -161,8 +161,8 @@ const UploadPage: React.FC = () => {
   return (
     <div className="container" style={{ paddingBottom: '5rem' }}>
       <header className="home-header">
-        <h1>Aggiungi Brano</h1>
-        <p>Digitalizza il tuo libretto fisico</p>
+        <h1>Aggiungi Canzone</h1>
+        <p>Trasforma una foto in testo e accordi</p>
       </header>
 
       <nav style={{ 
@@ -188,7 +188,7 @@ const UploadPage: React.FC = () => {
             color: 'var(--text-color)',
             opacity: 0.7
           }}>
-            <Search size={18} /> Cerca
+            <Search size={18} /> Cerca Brani
           </button>
         </Link>
         <button style={{ 
@@ -201,43 +201,45 @@ const UploadPage: React.FC = () => {
           justifyContent: 'center',
           gap: '0.5rem'
         }}>
-          <PlusCircle size={18} /> Aggiungi
+          <PlusCircle size={18} /> Aggiungi Nuova
         </button>
       </nav>
 
       <div className="song-container">
-        {/* GUIDA USABILITÀ */}
+        {/* GUIDA USABILITÀ SEMPLIFICATA */}
         <div style={{ 
           background: 'rgba(37, 99, 235, 0.1)', 
-          padding: '1rem', 
+          padding: '1.25rem', 
           borderRadius: '12px', 
           marginBottom: '2rem',
           border: '1px solid rgba(37, 99, 235, 0.2)',
-          fontSize: '0.9rem'
+          fontSize: '0.95rem'
         }}>
-          <h4 style={{ margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Camera size={18} /> Come aggiungere una canzone?
+          <h4 style={{ margin: '0 0 0.75rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--chord-color)' }}>
+            <Camera size={20} /> Come fare? È semplicissimo:
           </h4>
-          <ol style={{ margin: 0, paddingLeft: '1.2rem', opacity: 0.8, lineHeight: '1.4' }}>
-            <li>Inserisci il <strong>Titolo</strong> corretto.</li>
-            <li>Scatta una <strong>foto nitida</strong> del libretto (max 2 pagine).</li>
-            <li>Invia a <strong>Gemini</strong>: l'IA trascriverà testo e accordi.</li>
-            <li>Attendi 60s per il <strong>Deploy automatico</strong> su GitHub.</li>
-          </ol>
+          <ul style={{ margin: 0, paddingLeft: '0', listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+            <li style={{ display: 'flex', gap: '0.5rem' }}><strong>1.</strong> Scrivi il titolo della canzone qui sotto.</li>
+            <li style={{ display: 'flex', gap: '0.5rem' }}><strong>2.</strong> Clicca sul riquadro tratteggiato e scatta una foto nitida al foglio.</li>
+            <li style={{ display: 'flex', gap: '0.5rem' }}><strong>3.</strong> Clicca "Crea Canzone": il sistema leggerà la foto per te.</li>
+            <li style={{ display: 'flex', gap: '0.5rem' }}><strong>4.</strong> Attendi un minuto: la canzone apparirà magicamente nell'elenco!</li>
+          </ul>
         </div>
 
         <div style={{ marginBottom: '1.5rem' }}>
+          <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', opacity: 0.8 }}>Titolo della canzone:</label>
           <input
             type="text"
-            placeholder="Esempio: Albachiara - Vasco Rossi"
+            placeholder="Esempio: Albachiara"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             className="search-input"
-            style={{ marginBottom: '1rem', textAlign: 'center' }}
+            style={{ marginBottom: '1.5rem', textAlign: 'center' }}
             disabled={status === 'loading'}
           />
 
           <div style={{ textAlign: 'center' }}>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', opacity: 0.8 }}>Foto del foglio (max 2):</label>
             <input
               type="file"
               accept="image/*"
@@ -248,13 +250,13 @@ const UploadPage: React.FC = () => {
               disabled={status === 'loading' || images.length >= 2}
             />
             
-            <div style={{ display: 'grid', gridTemplateColumns: images.length > 1 ? '1fr 1fr' : '1fr', gap: '1rem', marginBottom: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: images.length > 1 ? '1fr 1fr' : '1fr', gap: '1rem', marginBottom: '1.5rem' }}>
               {images.map((img, index) => (
                 <div key={index} style={{ position: 'relative' }}>
-                  <img src={img} alt={`Preview ${index}`} style={{ width: '100%', height: '150px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #333' }} />
+                  <img src={img} alt={`Pagina ${index + 1}`} style={{ width: '100%', height: '180px', objectFit: 'cover', borderRadius: '12px', border: '1px solid #444' }} />
                   <button 
                     onClick={() => removeImage(index)}
-                    style={{ position: 'absolute', top: '-10px', right: '-10px', background: '#ff4444', color: 'white', borderRadius: '50%', width: '24px', height: '24px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer' }}
+                    style={{ position: 'absolute', top: '-8px', right: '-8px', background: '#ef4444', color: 'white', borderRadius: '50%', width: '28px', height: '28px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.3)' }}
                   >
                     ×
                   </button>
@@ -269,69 +271,61 @@ const UploadPage: React.FC = () => {
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '0.5rem',
-                    padding: '1rem',
-                    border: '2px dashed var(--chord-color)',
+                    gap: '0.75rem',
+                    padding: '1.5rem',
+                    border: '2px dashed #444',
                     borderRadius: '12px',
                     cursor: 'pointer',
-                    background: 'rgba(37, 99, 235, 0.05)',
-                    height: '150px'
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    height: '180px'
                   }}
                 >
-                  <Camera size={32} color="var(--chord-color)" />
-                  <span style={{ fontSize: '0.8rem' }}>{images.length === 0 ? 'Scatta Foto' : 'Aggiungi Pagina 2'}</span>
+                  <Camera size={40} opacity={0.5} />
+                  <span style={{ fontSize: '0.9rem', opacity: 0.6 }}>{images.length === 0 ? 'Tocca per scattare foto' : 'Aggiungi seconda pagina'}</span>
                 </label>
               )}
             </div>
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+        <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
           <button
             onClick={() => executeRequest(false)}
             disabled={images.length === 0 || !title || status === 'loading'}
-            style={{ flex: 2, justifyContent: 'center' }}
+            style={{ flex: 2, justifyContent: 'center', height: '3.5rem', fontSize: '1.1rem' }}
           >
-            {status === 'loading' ? <Loader2 className="animate-spin" size={20} /> : <Upload size={20} />}
-            Invia a Gemini
-          </button>
-          
-          <button
-            onClick={() => executeRequest(true)}
-            disabled={status === 'loading'}
-            style={{ flex: 1, justifyContent: 'center', background: 'var(--header-bg)', color: 'var(--text-color)', border: '1px solid var(--text-color)' }}
-          >
-            Test
+            {status === 'loading' ? <Loader2 className="animate-spin" size={24} /> : <Upload size={24} />}
+            Crea Canzone
           </button>
         </div>
 
-        {/* LOG TERMINAL */}
+        {/* LOG TERMINAL - SOLO SE NECESSARIO */}
         {(status !== 'idle' || logs.length > 0) && (
           <div style={{
-            background: '#1e1e1e',
-            color: '#00ff00',
+            background: '#111',
+            color: '#888',
             padding: '1rem',
-            borderRadius: '8px',
+            borderRadius: '12px',
             fontFamily: 'var(--font-mono)',
-            fontSize: '0.85rem',
-            marginTop: '1.5rem',
+            fontSize: '0.8rem',
+            marginTop: '1rem',
             textAlign: 'left',
-            maxHeight: '300px',
+            maxHeight: '200px',
             overflowY: 'auto',
-            border: status === 'error' ? '1px solid #ff4444' : '1px solid #333'
+            border: '1px solid #222'
           }}>
-            <div style={{ borderBottom: '1px solid #333', marginBottom: '0.5rem', paddingBottom: '0.25rem', display: 'flex', justifyContent: 'space-between' }}>
-              <span>Console Log (Sotto il cofano)</span>
-              {status === 'loading' && <Loader2 className="animate-spin" size={14} />}
+            <div style={{ borderBottom: '1px solid #222', marginBottom: '0.5rem', paddingBottom: '0.25rem', display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <span>Dettagli Tecnici (Sotto il cofano)</span>
+              {status === 'loading' && <Loader2 className="animate-spin" size={12} />}
             </div>
             {logs.map((log, i) => (
-              <div key={i} style={{ marginBottom: '0.25rem', color: log.includes('ERRORE') ? '#ff4444' : '#00ff00' }}>
+              <div key={i} style={{ marginBottom: '0.2rem', color: log.includes('ERRORE') ? '#ef4444' : (log.includes('SUCCESSO') ? '#10b981' : '#888') }}>
                 {log}
               </div>
             ))}
             {status === 'success' && (
-              <div style={{ color: '#10b981', marginTop: '1rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <CheckCircle2 size={16} /> TRASCRIZIONE COMPLETATA!
+              <div style={{ color: '#10b981', marginTop: '1rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
+                <CheckCircle2 size={18} /> CANZONE SALVATA CON SUCCESSO!
               </div>
             )}
           </div>

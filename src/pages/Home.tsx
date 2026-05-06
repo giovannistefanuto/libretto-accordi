@@ -69,8 +69,8 @@ const Home: React.FC = () => {
   return (
     <div className="container" style={{ paddingBottom: '5rem' }}>
       <header className="home-header">
-        <h1>Libretto Accordi</h1>
-        <p>Cerca tra i tuoi brani e suona ovunque</p>
+        <h1>Mio Canzoniere</h1>
+        <p>Tutte le tue canzoni preferite, pronte da suonare</p>
       </header>
 
       <nav style={{ 
@@ -92,7 +92,7 @@ const Home: React.FC = () => {
           justifyContent: 'center',
           gap: '0.5rem'
         }}>
-          <Search size={18} /> Cerca
+          <Search size={18} /> Cerca Brani
         </button>
         <Link to="/upload" style={{ flex: 1, textDecoration: 'none' }}>
           <button style={{ 
@@ -108,7 +108,7 @@ const Home: React.FC = () => {
             color: 'var(--text-color)',
             opacity: 0.7
           }}>
-            <PlusCircle size={18} /> Aggiungi
+            <PlusCircle size={18} /> Aggiungi Nuova
           </button>
         </Link>
       </nav>
@@ -117,7 +117,7 @@ const Home: React.FC = () => {
         <Search className="search-icon" size={20} />
         <input 
           type="text" 
-          placeholder="Titolo o artista..." 
+          placeholder="Cerca per titolo o autore..." 
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="search-input"
