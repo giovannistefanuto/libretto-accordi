@@ -24,7 +24,21 @@ const SongViewer: React.FC<SongViewerProps> = ({ chordProData, transpose, fontSi
   return (
     <div className="song-viewer" style={{ fontSize: `${fontSize}rem` }}>
       <h1>{song.title}</h1>
-      {song.artist && <h2 style={{ fontSize: '0.8em', opacity: 0.7 }}>{song.artist}</h2>}
+      {song.artist && <h2 style={{ fontSize: '0.8em', opacity: 0.7, marginBottom: '0.5rem' }}>{song.artist}</h2>}
+      {song.getMetadata('capo') && (
+        <div style={{ 
+          display: 'inline-block', 
+          background: 'rgba(37, 99, 235, 0.1)', 
+          color: 'var(--chord-color)', 
+          padding: '0.2rem 0.6rem', 
+          borderRadius: '4px', 
+          fontSize: '0.7em', 
+          fontWeight: 'bold',
+          marginBottom: '1rem' 
+        }}>
+          CAPOTASTO: {song.getMetadata('capo')}° TASTO
+        </div>
+      )}
       
       <div className="song-content">
         {transposedSong.paragraphs.map((paragraph, pIdx) => (

@@ -78,6 +78,9 @@ export default async function handler(req, res) {
           - Se nell'immagine trovi "Do", scrivi [C]. Se trovi "Re", scrivi [D], e così via.
           - Gli accordi devono essere tra parentesi quadre [] e posizionati ESATTAMENTE prima della sillaba su cui cambiano.
 
+          INFORMAZIONI EXTRA:
+          - Se nell'immagine vedi l'indicazione del "Capotasto" (es: "Capotasto al 2° tasto", "Capo 3", ecc.), inserisci il tag ChordPro standard {capo: N} all'inizio del file (dove N è il numero del tasto).
+
           STRUTTURA:
           - Usa {start_of_verse}/{end_of_verse} per le strofe.
           - Usa {start_of_chorus}/{end_of_chorus} per i ritornelli.
