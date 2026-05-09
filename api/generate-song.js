@@ -51,7 +51,8 @@ export default async function handler(req, res) {
     ];
 
     // Preparazione dati multimediali per Gemini con rilevamento dinamico del mimeType
-    const mediaParts = imagesList.map(img => {
+    // Esplicitiamo l'ordine delle immagini nel prompt per aiutare il modello
+    const mediaParts = imagesList.map((img, index) => {
       const match = img.match(/^data:(image\/\w+);base64,/);
       const mimeType = match ? match[1] : "image/jpeg";
       return {
@@ -79,28 +80,32 @@ export default async function handler(req, res) {
             const genAI = new GoogleGenerativeAI(currentKey);
             const model = genAI.getGenerativeModel({ model: modelName });
 
-            const prompt = `Agisci come un trascrittore musicale infallibile. Il tuo compito è convertire l'immagine di uno spartito/testo in formato ChordPro con precisione chirurgica.
+            const prompt = `Agisci come un trascrittore musicale infallibile. Il tuo compito è convertire le immagini di uno spartito/testo in formato ChordPro con precisione chirurgica.
 
             REGOLE DI FEDELTÀ ASSOLUTA:
-            1. NON USARE LA TUA MEMORIA: Non completare o correggere la canzone in base a come la conosci. Trascrivi SOLO ciò che vedi nell'immagine. Se un accordo manca nell'immagine, NON aggiungerlo.
-            2. MAPPATURA SPAZIALE: Gli accordi nell'immagine sono posizionati SOPRA il testo. In ChordPro, devi inserire l'accordo tra parentesi quadre [X] ESATTAMENTE prima del carattere o della sillaba che si trova verticalmente sotto l'accordo nell'immagine. Se un accordo è a metà parola, mettilo a metà parola.
-            3. NOTAZIONE: Usa solo la notazione internazionale (A, B, C, D, E, F, G). Se l'immagine usa Do, Re, Mi, Fa, Sol, La, Si, convertili rispettivamente in C, D, E, F, G, A, B.
-            4. ORDINE: Se ci sono più immagini, sono pagine consecutive. Uniscile in un unico flusso coerente.
-            5. PROCEDURA RIGA PER RIGA: Elabora il documento rigorosamente una riga alla volta dall'alto verso il basso. Per ogni riga di testo, verifica il numero esatto di accordi presenti sopra di essa nell'immagine. Assicurati che il numero di accordi nel tuo output ChordPro corrisponda esattamente al numero di accordi visibili su quella riga, senza omissioni.
+            1. NON USARE LA TUA MEMORIA: Non completare o correggere la canzone in base a come la conosci. Trascrivi SOLO ciò che vedi nelle immagini. Se un accordo manca, NON aggiungerlo.
+            2. MAPPATURA SPAZIALE: Gli accordi sono posizionati SOPRA il testo. In ChordPro, inserisci l'accordo [X] ESATTAMENTE prima della sillaba che si trova verticalmente sotto l'accordo.
+            3. NOTAZIONE: Usa solo la notazione internazionale (A, B, C, D, E, F, G). Converti Do, Re, Mi, Fa, Sol, La, Si in C, D, E, F, G, A, B.
+            4. ORDINE SEQUENZIALE: Ti ho fornito ${imagesList.length} immagini in ordine consecutivo (Pagina 1, Pagina 2, ecc.). Uniscile in un unico flusso coerente, rispettando rigorosamente l'ordine in cui te le ho inviate. Non saltare testo tra una pagina e l'altra.
+            5. PROCEDURA RIGA PER RIGA: Elabora il documento riga per riga dall'alto verso il basso. Assicurati che il numero di accordi corrisponda esattamente a quelli visibili.
 
             TAG OBBLIGATORI:
             - {title: ${userTitle}}
-            - {capo: N} (solo se esplicitamente scritto nell'immagine)
-            - {start_of_verse}/{end_of_verse} e {start_of_chorus}/{end_of_chorus} per dividere le sezioni.
-
-            ERRORE DA EVITARE: Non inventare accordi. Se un rigo non ha accordi, non metterli. Se l'immagine è sfocata, scrivi ciò che riesci a leggere senza indovinare.
+            - {capo: N} (solo se esplicitamente scritto)
+            - {start_of_verse}/{end_of_verse} e {start_of_chorus}/{end_of_chorus} per le sezioni.
 
             RISPOSTA: Restituisci SOLO il codice ChordPro puro.`;
 
-            const result = await model.generateContent([
-              ...mediaParts,
-              { text: prompt }
-            ]);
+            // Creiamo un array di parti che include descrizioni testuali per ogni immagine
+            const promptParts = [];
+            mediaParts.forEach((part, index) => {
+              promptParts.push({ text: `--- INIZIO PAGINA ${index + 1} ---` });
+              promptParts.push(part);
+              promptParts.push({ text: `--- FINE PAGINA ${index + 1} ---` });
+            });
+            promptParts.push({ text: prompt });
+
+            const result = await model.generateContent(promptParts);
 
             const responseText = result.response.text();
             chordProContent = responseText.replace(/```chordpro|```/g, '').trim();
@@ -184,6 +189,38 @@ export default async function handler(req, res) {
     });
 
     addLog(`FILE SALVATO: ${path}`);
+
+    // --- SALVATAGGIO IMMAGINI DI DEBUG ---
+    try {
+      addLog("Salvataggio immagini di debug...");
+      for (let i = 0; i < imagesList.length; i++) {
+        const debugPath = `public/debug_images/${fileName.replace('.chordpro', '')}-page${i + 1}.jpg`;
+        const base64Data = imagesList[i].split(',')[1] || imagesList[i];
+        
+        let debugSha = null;
+        try {
+          const { data: existingDebug } = await octokit.repos.getContent({
+            owner: REPO_OWNER,
+            repo: REPO_NAME,
+            path: debugPath,
+          });
+          if (existingDebug && !Array.isArray(existingDebug)) debugSha = existingDebug.sha;
+        } catch (e) {}
+
+        await octokit.repos.createOrUpdateFileContents({
+          owner: REPO_OWNER,
+          repo: REPO_NAME,
+          path: debugPath,
+          message: `📸 Debug image: ${userTitle} (Page ${i + 1})`,
+          content: base64Data,
+          sha: debugSha || undefined
+        });
+      }
+      addLog("Immagini di debug salvate.");
+    } catch (debugErr) {
+      addLog(`Avviso: Impossibile salvare immagini debug: ${debugErr.message}`);
+    }
+
     addLog("Il sito si aggiornerà tra circa 60 secondi.");
     
     return res.status(200).json({ success: true, fileName, logs });
