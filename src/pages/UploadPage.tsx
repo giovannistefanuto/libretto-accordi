@@ -60,41 +60,44 @@ const UploadPage: React.FC = () => {
         const img = new Image();
         img.src = e.target?.result as string;
         img.onload = () => {
-        // Calcoliamo il peso stimato in byte reali.
-        // Un carattere base64 rappresenta circa 0.75 byte.
-        const currentBytes = currentImages.reduce((acc, img) => acc + (img.length * 0.75), 0);
-        const estimatedTotalSize = currentBytes + file.size;
+          // Vercel limit is 4.5MB. Base64 adds ~33% overhead.
+          // 4.5MB / 1.33 = ~3.3MB available for raw images.
+          // If we have 2 images, we should target ~1.5MB per image to be safe.
+          const maxPayloadBytes = 3500000; // 3.5MB safe limit
+          const imagesCount = currentImages.length + 1;
+          const targetBytesPerImage = maxPayloadBytes / imagesCount;
 
-        // Limite Vercel 4.5MB. Stiamo cauti a 3.8MB per il payload totale.
-        const isTooLarge = estimatedTotalSize > 3800000; 
+          const canvas = document.createElement('canvas');
+          // Resolution strategy: 
+          // 1 image -> up to 2200px
+          // 2 images -> up to 1600px
+          const MAX_SIZE = imagesCount === 1 ? 2200 : 1600;
+          
+          let width = img.width;
+          let height = img.height;
 
-        const canvas = document.createElement('canvas');
-        // Per la massima precisione degli accordi, usiamo 2500px (o 2000px se il file è troppo grande)
-        const MAX_SIZE = isTooLarge ? 2000 : 2500; 
-        let width = img.width;
-        let height = img.height;
-
-        if (width > height) {
-          if (width > MAX_SIZE) {
-            height *= MAX_SIZE / width;
-            width = MAX_SIZE;
+          if (width > height) {
+            if (width > MAX_SIZE) {
+              height *= MAX_SIZE / width;
+              width = MAX_SIZE;
+            }
+          } else {
+            if (height > MAX_SIZE) {
+              width *= MAX_SIZE / height;
+              height = MAX_SIZE;
+            }
           }
-        } else {
-          if (height > MAX_SIZE) {
-            width *= MAX_SIZE / height;
-            height = MAX_SIZE;
-          }
-        }
 
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx?.drawImage(img, 0, 0, width, height);
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
 
-        // Usiamo PNG invece di JPEG: è lossless e preserva la nitidezza di testo e accordi piccoli.
-        // Ottimo per l'OCR di Gemini.
-        resolve(canvas.toDataURL('image/png'));
-        };      };
+          // We switch back to JPEG. PNG is too heavy for Vercel's 4.5MB limit when base64 encoded.
+          // 0.7 quality is a good compromise for OCR clarity vs file size.
+          resolve(canvas.toDataURL('image/jpeg', 0.7));
+        };
+      };
       reader.readAsDataURL(file);
     });
   };
