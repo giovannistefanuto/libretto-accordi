@@ -65,7 +65,6 @@ const UploadPage: React.FC = () => {
           // If we have 2 images, we should target ~1.5MB per image to be safe.
           const maxPayloadBytes = 3500000; // 3.5MB safe limit
           const imagesCount = currentImages.length + 1;
-          const targetBytesPerImage = maxPayloadBytes / imagesCount;
 
           const canvas = document.createElement('canvas');
           // Resolution strategy: 
