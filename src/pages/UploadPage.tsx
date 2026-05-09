@@ -100,7 +100,7 @@ const UploadPage: React.FC = () => {
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && images.length < 2) {
-      const processed = await processImage(file, images);
+      const processed = await processImage(file);
       setImages(prev => [...prev, processed]);
     }
   };
