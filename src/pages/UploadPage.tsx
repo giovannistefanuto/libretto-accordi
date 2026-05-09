@@ -150,7 +150,8 @@ const UploadPage: React.FC = () => {
       setStatus('success');
       
       if (!isTest) {
-        setTimeout(() => navigate('/'), 5000);
+        // Aumentato a 30 secondi per permettere la lettura dei log tecnici
+        setTimeout(() => navigate('/'), 30000);
       }
     } catch (err: any) {
       setStatus('error');
