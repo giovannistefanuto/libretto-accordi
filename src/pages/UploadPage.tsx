@@ -53,20 +53,21 @@ const UploadPage: React.FC = () => {
     );
   }
 
-  const processImage = (file: File, currentImages: string[]): Promise<string> => {
+  const processImage = (file: File): Promise<string> => {
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.onload = (e) => {
-      const img = new Image();
-      img.src = e.target?.result as string;
-      img.onload = () => {
-      // Vercel limit is 4.5MB. Base64 adds ~33% overhead.
-      // 4.5MB / 1.33 = ~3.3MB available for raw images.
-      // If we have 2 images, we should target ~1.5MB per image to be safe.
+        const img = new Image();
+        img.src = e.target?.result as string;
+        img.onload = () => {
+          // Vercel limit is 4.5MB. Base64 adds ~33% overhead.
+          // 4.5MB / 1.33 = ~3.3MB available for raw images.
+          // If we have 2 images, we should target ~1.5MB per image to be safe.
 
-      const canvas = document.createElement('canvas');
-      // Resolution strategy: 
-      // Always target a high enough resolution for OCR (around 2000px)          const MAX_SIZE = 2000;
+          const canvas = document.createElement('canvas');
+          // Resolution strategy: 
+          // Always target a high enough resolution for OCR (around 2000px)
+          const MAX_SIZE = 2000;
           
           let width = img.width;
           let height = img.height;
