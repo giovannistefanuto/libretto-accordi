@@ -1,50 +1,22 @@
-# 🎸 Diario di Bordo: Aggiornamenti 6 Maggio 2026
+# 📓 Diario di Bordo: 6 Maggio 2026 (Sessione Pomeridiana)
 
-## 1. 🔐 Protezione Area Upload
-*   **Gate di Accesso:** Implementata una pagina di login per la sezione "Aggiungi Canzone".
-*   **Password Unificata:** Utilizzata la password **"gio"** per autorizzare il caricamento.
+## 🚀 1. Ottimizzazioni Motore OCR (Gemini)
+*   **Qualità Lossless (PNG):** Sostituita la compressione JPEG con il formato **PNG** per l'invio delle foto all'AI. Questo elimina i pixel "sporchi" e rende gli accordi piccoli (es. Am6, B7) molto più nitidi per Gemini.
+*   **Calcolo Dimensioni Fix:** Corretto il bug nella stima del peso del payload base64 (ora usa il fattore 0.75). Garantita la massima risoluzione (2500px) restando sempre sotto il limite di 4.5MB di Vercel.
+*   **MimeType Dinamico:** L'API ora rileva automaticamente se l'immagine è PNG o JPEG, evitando errori di parsing lato Google.
+*   **Retry Rate-Limit:** Implementata un'attesa intelligente di 5 secondi in caso di errore "429 Too Many Requests", migliorando la stabilità con i modelli Preview.
+*   **Nuova Gerarchia Modelli:** Priorità impostata sui modelli **Pro** (3.1 Pro -> 2.5 Pro) per una precisione chirurgica nel posizionamento spaziale degli accordi, con i modelli Flash come fallback veloce.
 
-## 2. 📱 Menu di Navigazione & UX
-*   **Navigazione a Schede:** Introdotto un menu superiore per passare rapidamente tra le modalità "Cerca" e "Aggiungi".
-*   **Guida Onboarding:** Aggiunta una sezione "Come Funziona" nella pagina di upload per guidare l'utente nel processo di scatto foto e invio a Gemini.
-*   **Visual Feedback:** Migliorati i placeholder e le etichette per rendere l'interfaccia più parlante (es. "Scatta Foto" invece di "Aggiungi Foto").
-*   **Log Preservation:** Mantenuo il terminale dei log per il monitoraggio tecnico, ma spostato in una sezione dedicata "Sotto il cofano".
+## 🎸 2. Nuova Feature: Diagrammi Accordi al Click
+*   **Interattività:** Gli accordi nel testo sono ora cliccabili e mostrano un diagramma a fumetto (tooltip).
+*   **Motore SVG Nativo:** Implementato un componente SVG personalizzato per il disegno dei diagrammi. Zero dipendenze esterne fragili, 100% stabilità e caricamento istantaneo.
+*   **Integrazione chords-db:** Collegato un database professionale di oltre 2000 posizioni per chitarra.
+*   **Normalizzazione Intelligente:** Il sistema traduce automaticamente i nomi italiani (Do, Re, Mi...) e i simboli (-, Δ, #, b) per trovare sempre la posizione corretta.
 
----
-
-# 🎸 Diario di Bordo: Aggiornamenti 5 Maggio 2026
-
-Questo file contiene il riepilogo delle modifiche e delle nuove funzionalità implementate nella sessione odierna.
-
-## 1. 🤖 Potenziamento del Motore AI (Gemini 2.5 Flash)
-*   **Rotazione Multi-Chiave:** Implementato il supporto per **5 chiavi API** (`GEMINI_API_KEY_1..5`). Il sistema passa automaticamente alla successiva se una fallisce o esaurisce la quota.
-*   **Retry & Timeout:** Aggiunto un sistema di **2 tentativi rapidi** per ogni chiave con attesa di 1 secondo, ottimizzato per rientrare nel limite di 10 secondi di Vercel Hobby.
-*   **Prompt Internazionale:** Forzata la notazione internazionale (**A, B, C...**) nel prompt di sistema, con istruzioni esplicite per convertire gli accordi italiani ("Do", "Re"...) durante la trascrizione.
-
-## 2. 📸 Nuova Gestione Immagini & Mobile
-*   **Supporto Multi-Pagina:** Aggiornata l'interfaccia di upload per permettere il caricamento di **fino a 2 foto** contemporaneamente. Gemini analizza entrambe le pagine e genera un unico file ChordPro coerente.
-*   **Compressione Adattiva "Smart":** 
-    *   Sotto i 3MB totali: Mantiene altissima qualità (**2000px, 90% quality**) per una precisione OCR impeccabile.
-    *   Sopra i 3MB: Riduce a **1600px, 70% quality** per garantire l'upload anche su reti mobili lente e rispettare i limiti di Vercel (4.5MB payload).
-*   **Anteprima Dinamica:** Aggiunta griglia di anteprima con possibilità di rimuovere singole foto cliccando sulla "×".
-
-## 3. 🗑️ Gestione Libreria & Sicurezza
-*   **Gesto Long-Press:** Implementata l'eliminazione delle canzoni tramite **pressione prolungata** (1 secondo) sull'elemento della lista.
-*   **Protezione con Password:** L'eliminazione richiede l'inserimento della password **"gio"**. Il pulsante di conferma rimane disabilitato e grigio finché la password non è corretta.
-*   **Feedback Tattile:** Aggiunta una leggera vibrazione (sui dispositivi supportati) al rilevamento della pressione prolungata.
-
-## 4. 🛠️ Correzioni Tecniche & Bug Fix (Sotto il cofano)
-*   **Fix Errore SHA:** Risolto il bug `"sha" wasn't supplied` che impediva di sovrascrivere canzoni già esistenti. Ora il sistema recupera automaticamente la versione precedente prima di aggiornare.
-*   **TypeScript Health:** Corretti errori di compilazione in `UploadPage.tsx` dovuti alla migrazione dallo stato `image` singolo all'array `images`.
-*   **Git Revert:** Gestito con successo il ripristino di una versione precedente dell'API su richiesta, mantenendo però i miglioramenti al prompt e alla stabilità.
-*   **Error Logging:** Potenziato il terminale di log nell'app per mostrare errori critici in rosso e messaggi di successo in verde.
-
-## 3. 🚀 Ottimizzazione OCR & Stabilità (Fix Post-Analisi)
-*   **Passaggio a PNG:** Sostituito il formato JPEG con **PNG (lossless)** per l'invio delle immagini a Gemini. Questo elimina gli artefatti di compressione e rende i testi/accordi piccoli molto più nitidi per l'AI.
-*   **Calcolo Dimensioni Accurato:** Corretto il bug nella stima del peso del payload (ora calcola correttamente i byte dal base64), garantendo di rimanere sempre sotto il limite di 4.5MB di Vercel senza sacrificare troppo la risoluzione.
-*   **MimeType Dinamico:** L'API ora rileva automaticamente se l'immagine è PNG o JPEG dall'header base64, evitando errori di parsing lato Gemini.
-*   **Retry Intelligente:** Implementato un sistema di **retry automatico (5s di attesa)** in caso di errori di "Rate Limit" (429) o quota esaurita sui modelli preview.
-*   **Prompt Muscolare:** Affinate le istruzioni per la conversione della notazione (Do->C, Re->D...) per renderle meno ambigue per il modello.
+## 🔧 3. Bug Fix & Stabilità
+*   **Vite/Vercel Build Fix:** Risolto un errore critico di compilazione causato da una libreria CommonJS non compatibile con ESM.
+*   **TypeScript Health:** Corretti errori di importazione (`import type`) richiesti dalle nuove policy rigorose di Vercel.
+*   **UI Safety:** Aggiunto un `ErrorBoundary` e log di sicurezza per prevenire crash dell'intera pagina in caso di dati accordi mancanti.
 
 ---
-*Log generato il 6 Maggio 2026*
+*Sessione completata con successo. Sistema OCR potenziato e funzionalità didattica attiva.*

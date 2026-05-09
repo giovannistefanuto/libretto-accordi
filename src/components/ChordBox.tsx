@@ -132,18 +132,24 @@ const ChordBox: React.FC<ChordBoxProps> = ({ chordName }) => {
       const keyMatch = baseName.match(/^([A-G][#b]?)/);
       if (keyMatch && guitarData?.chords) {
         let key = keyMatch[0];
-        // Adattamento per b/flat
-        if (key === 'Db') key = 'C#'; // Normalizziamo su una delle due per il DB
-        if (key === 'Gb') key = 'F#';
+        // Normalizzazione chiavi per il DB (es: Db -> C#, Gb -> F#)
+        const keyMap: any = { 'Db': 'C#', 'Eb': 'D#', 'Gb': 'F#', 'Ab': 'G#', 'Bb': 'A#' };
+        if (keyMap[key]) key = keyMap[key];
         
-        const suffix = baseName.replace(key, '') || 'major';
-        const formattedSuffix = suffix === 'm' ? 'minor' : (suffix === '7' ? '7' : suffix);
+        const rest = baseName.replace(keyMatch[0], '');
+        // Gestione suffissi comuni
+        let formattedSuffix = rest;
+        if (rest === 'm' || rest === '-') formattedSuffix = 'minor';
+        if (rest === '' || rest === 'maj') formattedSuffix = 'major';
+        if (rest === '7') formattedSuffix = '7';
 
         const keyChords = (guitarData.chords as any)[key];
         if (keyChords) {
+          // Cerchiamo una corrispondenza flessibile per il suffisso
           const chordMatch = keyChords.find((c: any) => 
             c.suffix.toLowerCase() === formattedSuffix.toLowerCase() ||
-            (formattedSuffix === 'major' && c.suffix === '')
+            (formattedSuffix === 'major' && c.suffix === '') ||
+            (formattedSuffix === 'minor' && (c.suffix === 'm' || c.suffix === 'min'))
           );
 
           if (chordMatch?.positions?.length > 0) {

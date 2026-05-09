@@ -45,7 +45,9 @@ export default async function handler(req, res) {
       "gemini-3.1-pro-preview",     // Il top per ragionamento spaziale e OCR
       "gemini-2.5-pro",             // Estremamente stabile e preciso
       "gemini-3.1-flash-preview",   // Veloce, ottimo compromesso
-      "gemini-2.5-flash"            // La rete di sicurezza (affidabile e veloce)
+      "gemini-2.5-flash",           // La rete di sicurezza (affidabile e veloce)
+      "gemini-1.5-pro",             // Fallback storico robusto (Precisione)
+      "gemini-1.5-flash"            // Ultima spiaggia (Velocità)
     ];
 
     // Preparazione dati multimediali per Gemini con rilevamento dinamico del mimeType
@@ -114,7 +116,7 @@ export default async function handler(req, res) {
             // Se è un errore di Rate Limit o Quota, proviamo ad aspettare un po'
             if (errMsg.includes("429") || errMsg.includes("quota") || errMsg.includes("rate limit")) {
               if (attempts < maxRetries) {
-                addLog("Rate limit rilevato, attendo 5 secondi prima del retry...");
+                addLog(`Rate limit su ${modelName}, attendo 5 secondi prima del retry...`);
                 await sleep(5000);
                 attempts++;
                 continue;
@@ -122,8 +124,12 @@ export default async function handler(req, res) {
             }
 
             // Se la chiave è invalida o scaduta, passiamo subito alla chiave successiva
-            if (errMsg.includes("api_key_invalid") || errMsg.includes("not found") || errMsg.includes("expired") || errMsg.includes("unauthorized")) {
+            // Evitiamo "not found" perché spesso si riferisce al MODELLO e non alla chiave
+            if (errMsg.includes("api_key_invalid") || errMsg.includes("expired") || errMsg.includes("unauthorized") || errMsg.includes("key not found")) {
               keyHasAuthError = true;
+              addLog(`Errore critico di autenticazione con la chiave corrente.`);
+            } else {
+              addLog(`${modelName} non disponibile, provo il prossimo modello...`);
             }
             break; 
           }
