@@ -67,9 +67,8 @@ const UploadPage: React.FC = () => {
 
           const canvas = document.createElement('canvas');
           // Resolution strategy: 
-          // 1 image -> up to 2200px
-          // 2 images -> up to 1600px
-          const MAX_SIZE = imagesCount === 1 ? 2200 : 1600;
+          // Always target a high enough resolution for OCR (around 2000px)
+          const MAX_SIZE = 2000;
           
           let width = img.width;
           let height = img.height;
@@ -91,9 +90,8 @@ const UploadPage: React.FC = () => {
           const ctx = canvas.getContext('2d');
           ctx?.drawImage(img, 0, 0, width, height);
 
-          // We switch back to JPEG. PNG is too heavy for Vercel's 4.5MB limit when base64 encoded.
-          // 0.7 quality is a good compromise for OCR clarity vs file size.
-          resolve(canvas.toDataURL('image/jpeg', 0.7));
+          // Quality 0.85 is the sweet spot for OCR (fewer artifacts than 0.7)
+          resolve(canvas.toDataURL('image/jpeg', 0.85));
         };
       };
       reader.readAsDataURL(file);

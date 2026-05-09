@@ -84,15 +84,24 @@ export default async function handler(req, res) {
             1. NON USARE LA TUA MEMORIA: Non completare o correggere la canzone in base a come la conosci. Trascrivi SOLO ciò che vedi nelle immagini. Se un accordo manca, NON aggiungerlo.
             2. MAPPATURA SPAZIALE: Gli accordi sono posizionati SOPRA il testo. In ChordPro, inserisci l'accordo [X] ESATTAMENTE prima della sillaba che si trova verticalmente sotto l'accordo.
             3. NOTAZIONE: Usa solo la notazione internazionale (A, B, C, D, E, F, G). Converti Do, Re, Mi, Fa, Sol, La, Si in C, D, E, F, G, A, B.
-            4. ORDINE SEQUENZIALE: Ti ho fornito ${imagesList.length} immagini in ordine consecutivo (Pagina 1, Pagina 2, ecc.). Uniscile in un unico flusso coerente, rispettando rigorosamente l'ordine in cui te le ho inviate. Non saltare testo tra una pagina e l'altra.
-            5. PROCEDURA RIGA PER RIGA: Elabora il documento riga per riga dall'alto verso il basso. Assicurati che il numero di accordi corrisponda esattamente a quelli visibili.
+            4. ORDINE SEQUENZIALE: Ti ho fornito ${imagesList.length} immagini in ordine consecutivo. Uniscile in un unico flusso coerente.
 
-            TAG OBBLIGATORI:
-            - {title: ${userTitle}}
-            - {capo: N} (solo se esplicitamente scritto)
-            - {start_of_verse}/{end_of_verse} e {start_of_chorus}/{end_of_chorus} per le sezioni.
+            ESEMPIO DI FORMATO RICHIESTO:
+            {title: Albachiara}
+            {artist: Vasco Rossi}
 
-            RISPOSTA: Restituisci SOLO il codice ChordPro puro.`;
+            {start_of_verse}
+            [C]Respiri [G]piano per non [Am]far rumore
+            Ti [F]addormenti di [C]sera
+            E ti [G]risvegli col [Am]sole
+            {end_of_verse}
+
+            {start_of_chorus}
+            [F] Sei [G]chiara come un'al[C]ba
+            [F] Sei [G]fresca come l'ar[C]ia
+            {end_of_chorus}
+
+            RISPOSTA: Restituisci SOLO il codice ChordPro puro, senza commenti o introduzioni.`;
 
             // Creiamo un array di parti che include descrizioni testuali per ogni immagine
             const promptParts = [];
@@ -106,7 +115,17 @@ export default async function handler(req, res) {
             const result = await model.generateContent(promptParts);
 
             const responseText = result.response.text();
-            chordProContent = responseText.replace(/```chordpro|```/g, '').trim();
+            
+            // Cleanup robusto: estraiamo tutto ciò che sta tra il primo { e l'ultimo }
+            const startIdx = responseText.indexOf('{');
+            const endIdx = responseText.lastIndexOf('}');
+            
+            if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+              chordProContent = responseText.substring(startIdx, endIdx + 1).trim();
+            } else {
+              // Fallback se non trova le graffe (meno probabile con il nuovo prompt)
+              chordProContent = responseText.replace(/```chordpro|```/g, '').trim();
+            }
             
             if (chordProContent) {
               addLog(`Trascrizione completata con ${modelName}.`);

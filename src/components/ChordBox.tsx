@@ -137,11 +137,34 @@ const ChordBox: React.FC<ChordBoxProps> = ({ chordName }) => {
         if (keyMap[key]) key = keyMap[key];
         
         const rest = baseName.replace(keyMatch[0], '');
-        // Gestione suffissi comuni
-        let formattedSuffix = rest;
-        if (rest === 'm' || rest === '-') formattedSuffix = 'minor';
-        if (rest === '' || rest === 'maj') formattedSuffix = 'major';
-        if (rest === '7') formattedSuffix = '7';
+        
+        // Mappatura estesa dei suffissi per chords-db
+        const suffixMap: { [key: string]: string } = {
+          '': 'major',
+          'm': 'minor',
+          '7': '7',
+          'm7': 'minor-seventh',
+          'maj7': 'major-seventh',
+          'dim': 'diminished',
+          'dim7': 'diminished-seventh',
+          'sus2': 'suspended-second',
+          'sus4': 'suspended-fourth',
+          '7sus4': 'suspended-fourth',
+          'add9': 'add9',
+          'aug': 'augmented',
+          '6': '6',
+          'm6': 'minor-sixth',
+          '9': '9',
+          'm9': 'minor-ninth',
+          'maj9': 'major-ninth'
+        };
+
+        let formattedSuffix = suffixMap[rest] || rest;
+        
+        // Fallback intelligenti per variazioni comuni
+        if (rest === '-' || rest === 'min') formattedSuffix = 'minor';
+        if (rest === 'maj' || rest === 'M') formattedSuffix = 'major';
+        if (rest === 'Δ' || rest === 'Δ7') formattedSuffix = 'major-seventh';
 
         const keyChords = (guitarData.chords as any)[key];
         if (keyChords) {
@@ -149,7 +172,8 @@ const ChordBox: React.FC<ChordBoxProps> = ({ chordName }) => {
           const chordMatch = keyChords.find((c: any) => 
             c.suffix.toLowerCase() === formattedSuffix.toLowerCase() ||
             (formattedSuffix === 'major' && c.suffix === '') ||
-            (formattedSuffix === 'minor' && (c.suffix === 'm' || c.suffix === 'min'))
+            (formattedSuffix === 'minor' && (c.suffix === 'm' || c.suffix === 'min')) ||
+            (c.suffix === rest) // Ultimo tentativo con il suffisso originale
           );
 
           if (chordMatch?.positions?.length > 0) {
