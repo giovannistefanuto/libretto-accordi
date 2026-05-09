@@ -78,30 +78,47 @@ export default async function handler(req, res) {
             const genAI = new GoogleGenerativeAI(currentKey);
             const model = genAI.getGenerativeModel({ model: modelName });
 
-            const prompt = `Agisci come un trascrittore musicale infallibile. Il tuo compito è convertire le immagini di uno spartito/testo in formato ChordPro con precisione chirurgica.
+            const prompt = `SYSTEM PROMPT: ADVANCED SPATIAL CHORD OCR & MIR EXTRACTOR
 
-            REGOLE DI FEDELTÀ ASSOLUTA:
-            1. NON USARE LA TUA MEMORIA: Non completare o correggere la canzone in base a come la conosci. Trascrivi SOLO ciò che vedi nelle immagini. Se un accordo manca, NON aggiungerlo.
-            2. MAPPATURA SPAZIALE: Gli accordi sono posizionati SOPRA il testo. In ChordPro, inserisci l'accordo [X] ESATTAMENTE prima della sillaba che si trova verticalmente sotto l'accordo.
-            3. NOTAZIONE: Usa solo la notazione internazionale (A, B, C, D, E, F, G). Converti Do, Re, Mi, Fa, Sol, La, Si in C, D, E, F, G, A, B.
-            4. ORDINE SEQUENZIALE: Ti ho fornito ${imagesList.length} immagini in ordine consecutivo. Uniscile in un unico flusso coerente.
+ROLE & CORE DIRECTIVE:
+You are a deterministic, highly precise Optical Character Recognition (OCR) system and a Spatial Vision Engineer operating strictly on Musical Information Retrieval (MIR) logic. Your sole, exclusive purpose is to digitize physical chord songbooks into a strict, parser-safe ChordPro format.
 
-            ESEMPIO DI FORMATO RICHIESTO:
-            {title: Albachiara}
-            {artist: Vasco Rossi}
+CRITICAL CONSTRAINT: DISABLE ALL MUSICAL PRIORS
+You must act as a blind geometric laser scanner. DO NOT use your internal knowledge of music theory, harmony, song lyrics, or chord progressions to guess, infer, or "fix" the image. You must ONLY transcribe what is physically printed on the page at the exact X-Y coordinate you perceive. If a chord visually sits over the word "Mare", it must be attached to "Mare", even if your musical training asserts it belongs on the word "Sole". Spatial location absolutely overrides semantic logic.
 
-            {start_of_verse}
-            [C]Respiri [G]piano per non [Am]far rumore
-            Ti [F]addormenti di [C]sera
-            E ti [G]risvegli col [Am]sole
-            {end_of_verse}
+WORKFLOW: VISUAL ANCHORING & INTERNAL VERIFICATION (INVISIBLE CoT)
+To prevent "Spatial Drift" and "Vertical Alignment Failure", you MUST map the spatial coordinates of the lines before generating the final output. You will execute this logic inside a rigid <internal_verification> XML block.
 
-            {start_of_chorus}
-            [F] Sei [G]chiara come un'al[C]ba
-            [F] Sei [G]fresca come l'ar[C]ia
-            {end_of_chorus}
+For every line pair (Chord line + Text line) in the image, perform the following step-by-step:
+1. Extract the exact chords present on the upper line and COUNT them.
+2. Extract the syllables/words on the text line below them.
+3. Orthogonally map the chord to the exact syllable that shares its X-coordinate projection (Visual Anchoring).
+4. Verify the chord count. You are strictly forbidden from proceeding to the ChordPro rendering until the mapped chord count matches the visual chord count.
 
-            RISPOSTA: Restituisci SOLO il codice ChordPro puro, senza commenti o introduzioni.`;
+CHORDPRO FORMATTING SAFE RULES (ZERO TOLERANCE):
+The frontend utilizes chordsheetjs and a rigid @tombatossals/chords-db database. Any deviation will crash the React application. Obey these rules unconditionally:
+- Bracket Placement (No Spaces): Chords must be enclosed in brackets and attached directly to the start of the matching syllable WITH ZERO SPACES between the bracket and the letter or inside the bracket.
+  * CORRECT: [C]Mare | [Dm7]Sole | pa[G]rola
+  * FATAL ERROR: [C] Mare | [C ]Mare | [ C ] Mare | pa [G] rola
+- Anti-Hallucination (Strict Fallback): Transcribe the exact chord printed. If an image is blurry, obscured by shadows, or shows tiny print, DO NOT hallucinate complex jazz extensions (e.g., do not invent Cmaj7/9 or G13b9). Fallback to the clearest base chord (e.g., C or G) readable. The database only supports standard suffixes (major, minor, m7, maj7, dim, sus4, etc.).
+- Slash Chords: Must strictly use a forward slash with no spaces: C/G, Am/E. Do not use "on" or backslashes.
+- Section Delimiters: Do not use plain text dividers. Use standard ChordPro directives for sections: {start_of_chorus}, {end_of_chorus}, {c: Verse 1}.
+- Absolute Silence: Do NOT output conversational text, greetings, or explanations. Output ONLY the <internal_verification> block followed immediately by the chordpro code block.
+
+FEW-SHOT EXAMPLE (CHARACTER-TO-CHORD MAPPING)
+Input Image Context: (An image showing "C" over "Walk", "G" over "ing", "Am" over "home")
+Your Output:
+<internal_verification>
+Line Pair 1:
+- Chords found: 3 (C, G, Am)
+- Syllables/Words: "Walk", "ing", "home"
+- Spatial Mapping: 'C' (X:10) -> 'Walk' (X:10); 'G' (X:50) -> 'ing' (X:50); 'Am' (X:90) -> 'home' (X:90)
+- Verification: 3 visual chords = 3 mapped chords. Merge authorized.
+</internal_verification>
+
+[C]Walk[G]ing [Am]home
+
+Now, analyze the user's provided ${imagesList.length} images as a single continuous document, following this exact protocol.`;
 
             // Creiamo un array di parti che include descrizioni testuali per ogni immagine
             const promptParts = [];
@@ -116,18 +133,18 @@ export default async function handler(req, res) {
 
             const responseText = result.response.text();
             
-            // Cleanup robusto: prendiamo tutto ciò che parte dal primo { fino alla fine
-            // per evitare di tagliare il testo se la canzone non termina con un tag }
-            const startIdx = responseText.indexOf('{');
+            // LOGICA DI CLEANUP AVANZATA (basata sul PDF)
+            // 1. Rimuoviamo il blocco di verifica interna
+            chordProContent = responseText.replace(/<internal_verification>[\s\S]*?<\/internal_verification>/g, '').trim();
             
-            if (startIdx !== -1) {
-              chordProContent = responseText.substring(startIdx).trim();
-              // Rimuoviamo eventuali blocchi di codice markdown se presenti alla fine
-              chordProContent = chordProContent.replace(/```/g, '').trim();
-            } else {
-              // Fallback se non trova le graffe
-              chordProContent = responseText.replace(/```chordpro|```/g, '').trim();
+            // 2. Pulizia finale (rimozione markdown o testo spurio prima del primo { o [)
+            const firstTagIdx = chordProContent.search(/[\{\[]/);
+            if (firstTagIdx !== -1) {
+              chordProContent = chordProContent.substring(firstTagIdx).trim();
             }
+            
+            // 3. Rimuoviamo residui markdown se presenti
+            chordProContent = chordProContent.replace(/```chordpro|```/g, '').trim();
             
             if (chordProContent) {
               addLog(`Trascrizione completata con ${modelName}.`);
