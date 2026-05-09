@@ -97,28 +97,33 @@ For every line pair (Chord line + Text line) in the image, perform the following
 
 CHORDPRO FORMATTING SAFE RULES (ZERO TOLERANCE):
 The frontend utilizes chordsheetjs and a rigid @tombatossals/chords-db database. Any deviation will crash the React application. Obey these rules unconditionally:
+- NOTATION CONVERSION (MANDATORY): You MUST convert Latin notation to International notation.
+  * DO/RE/MI/FA/SOL/LA/SI -> C/D/E/F/G/A/B
+  * "m" or "-" (minor) -> must be "m" (e.g., Rem -> Dm, Sol- -> Gm)
+  * "7" -> remains "7" (e.g., Lam7 -> Am7)
+  * "/" (bass) -> remains "/" (e.g., Do/Sol -> C/G)
+  * IF YOU OUTPUT "Do, Re, Mi, Sol-, Re-" YOU HAVE FAILED THE TASK.
+
 - Bracket Placement (No Spaces): Chords must be enclosed in brackets and attached directly to the start of the matching syllable WITH ZERO SPACES between the bracket and the letter or inside the bracket.
   * CORRECT: [C]Mare | [Dm7]Sole | pa[G]rola
   * FATAL ERROR: [C] Mare | [C ]Mare | [ C ] Mare | pa [G] rola
+
 - Anti-Hallucination (Strict Fallback): Transcribe the exact chord printed. If an image is blurry, obscured by shadows, or shows tiny print, DO NOT hallucinate complex jazz extensions (e.g., do not invent Cmaj7/9 or G13b9). Fallback to the clearest base chord (e.g., C or G) readable. The database only supports standard suffixes (major, minor, m7, maj7, dim, sus4, etc.).
-- Slash Chords: Must strictly use a forward slash with no spaces: C/G, Am/E. Do not use "on" or backslashes.
-- Section Delimiters: Do not use plain text dividers. Use standard ChordPro directives for sections: {start_of_chorus}, {end_of_chorus}, {c: Verse 1}.
-- Absolute Silence: Do NOT output conversational text, greetings, or explanations. Output ONLY the <internal_verification> block followed immediately by the chordpro code block.
 
 FEW-SHOT EXAMPLE (CHARACTER-TO-CHORD MAPPING)
-Input Image Context: (An image showing "C" over "Walk", "G" over "ing", "Am" over "home")
+Input Image Context: (Image showing "Rem7" over "Amo", "Sol" over "re")
 Your Output:
 <internal_verification>
 Line Pair 1:
-- Chords found: 3 (C, G, Am)
-- Syllables/Words: "Walk", "ing", "home"
-- Spatial Mapping: 'C' (X:10) -> 'Walk' (X:10); 'G' (X:50) -> 'ing' (X:50); 'Am' (X:90) -> 'home' (X:90)
-- Verification: 3 visual chords = 3 mapped chords. Merge authorized.
+- Visual Chords: Rem7, Sol
+- Conversion: Rem7 -> Dm7, Sol -> G
+- Spatial Mapping: 'Dm7' (X:10) -> 'Amo' (X:10); 'G' (X:50) -> 're' (X:50)
+- Verification: 2 chords found, 2 converted, 2 mapped.
 </internal_verification>
 
-[C]Walk[G]ing [Am]home
+[Dm7]Amo[G]re
 
-Now, analyze the user's provided ${imagesList.length} images as a single continuous document, following this exact protocol.`;
+Now, analyze the user's provided ${imagesList.length} images. Remember: NO LATIN NOTATION. ONLY A,B,C,D,E,F,G.`;
 
             // Creiamo un array di parti che include descrizioni testuali per ogni immagine
             const promptParts = [];
@@ -132,20 +137,31 @@ Now, analyze the user's provided ${imagesList.length} images as a single continu
             const result = await model.generateContent(promptParts);
 
             const responseText = result.response.text();
-            
+
             // LOGICA DI CLEANUP AVANZATA (basata sul PDF)
             // 1. Rimuoviamo il blocco di verifica interna
             chordProContent = responseText.replace(/<internal_verification>[\s\S]*?<\/internal_verification>/g, '').trim();
-            
+
             // 2. Pulizia finale (rimozione markdown o testo spurio prima del primo { o [)
             const firstTagIdx = chordProContent.search(/[\{\[]/);
             if (firstTagIdx !== -1) {
               chordProContent = chordProContent.substring(firstTagIdx).trim();
             }
-            
+
             // 3. Rimuoviamo residui markdown se presenti
             chordProContent = chordProContent.replace(/```chordpro|```/g, '').trim();
-            
+
+            // 4. FIX LAST RESORT: Se Gemini ha ignorato il prompt e ha usato notazione italiana, proviamo a convertirla noi
+            // Questo è un paracadute se l'AI fallisce l'istruzione
+            const notationMap = {
+              'Do': 'C', 'Re': 'D', 'Mi': 'E', 'Fa': 'F', 'Sol': 'G', 'La': 'A', 'Si': 'B'
+            };
+            Object.entries(notationMap).forEach(([it, en]) => {
+              const regex = new RegExp(`\\[${it}`, 'g');
+              chordProContent = chordProContent.replace(regex, `[${en}`);
+            });
+            chordProContent = chordProContent.replace(/-]/g, 'm]'); // Converte [Re-] in [Dm] (dopo il cambio Re->D)
+
             if (chordProContent) {
               addLog(`Trascrizione completata con ${modelName}.`);
               break; 
