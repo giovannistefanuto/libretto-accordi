@@ -63,7 +63,6 @@ const UploadPage: React.FC = () => {
           // Vercel limit is 4.5MB. Base64 adds ~33% overhead.
           // 4.5MB / 1.33 = ~3.3MB available for raw images.
           // If we have 2 images, we should target ~1.5MB per image to be safe.
-          const maxPayloadBytes = 3500000; // 3.5MB safe limit
           const imagesCount = currentImages.length + 1;
 
           const canvas = document.createElement('canvas');
