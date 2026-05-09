@@ -116,14 +116,16 @@ export default async function handler(req, res) {
 
             const responseText = result.response.text();
             
-            // Cleanup robusto: estraiamo tutto ciò che sta tra il primo { e l'ultimo }
+            // Cleanup robusto: prendiamo tutto ciò che parte dal primo { fino alla fine
+            // per evitare di tagliare il testo se la canzone non termina con un tag }
             const startIdx = responseText.indexOf('{');
-            const endIdx = responseText.lastIndexOf('}');
             
-            if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
-              chordProContent = responseText.substring(startIdx, endIdx + 1).trim();
+            if (startIdx !== -1) {
+              chordProContent = responseText.substring(startIdx).trim();
+              // Rimuoviamo eventuali blocchi di codice markdown se presenti alla fine
+              chordProContent = chordProContent.replace(/```/g, '').trim();
             } else {
-              // Fallback se non trova le graffe (meno probabile con il nuovo prompt)
+              // Fallback se non trova le graffe
               chordProContent = responseText.replace(/```chordpro|```/g, '').trim();
             }
             
