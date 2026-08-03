@@ -66,8 +66,8 @@ const UploadPage: React.FC = () => {
 
           const canvas = document.createElement('canvas');
           // Resolution strategy: 
-          // Always target a high enough resolution for OCR (around 2000px)
-          const MAX_SIZE = 2000;
+          // Target high resolution for OCR accuracy (2500px) while staying within Vercel's 4.5MB limit
+          const MAX_SIZE = 2500;
           
           let width = img.width;
           let height = img.height;

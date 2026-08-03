@@ -40,12 +40,11 @@ export default async function handler(req, res) {
     addLog(`Elaborazione canzone: ${userTitle} (${imagesList.length} immagini)`);
     let chordProContent = null;
 
-    // Gerarchia Modelli Ottimizzata (Qualità Pro -> Velocità Flash)
+    // Gerarchia Modelli Ottimizzata (Agosto 2026)
     const modelsPriority = [
-      "gemini-3.1-pro-preview",     // Il top per ragionamento spaziale e OCR
-      "gemini-2.5-pro",             // Estremamente stabile e preciso
-      "gemini-3.1-flash-preview",   // Veloce, ottimo compromesso
-      "gemini-2.5-flash"            // La rete di sicurezza (affidabile e veloce)
+      "gemini-3.6-flash",           // Modello principale: veloce, stabile, ottimo OCR
+      "gemini-2.5-pro",             // Fallback Pro: massima precisione
+      "gemini-2.5-flash"            // Fallback legacy: rete di sicurezza
     ];
 
     // Preparazione dati multimediali per Gemini con rilevamento dinamico del mimeType
@@ -78,7 +77,7 @@ export default async function handler(req, res) {
             const genAI = new GoogleGenerativeAI(currentKey);
             const model = genAI.getGenerativeModel({ model: modelName });
 
-            const prompt = `SYSTEM PROMPT: ADVANCED SPATIAL CHORD OCR & MIR EXTRACTOR
+            const prompt = `SYSTEM PROMPT: ADVANCED SPATIAL CHORD OCR & MIR EXTRACTOR (v2)
 
 ROLE & CORE DIRECTIVE:
 You are a deterministic, highly precise Optical Character Recognition (OCR) system and a Spatial Vision Engineer operating strictly on Musical Information Retrieval (MIR) logic. Your sole, exclusive purpose is to digitize physical chord songbooks into a strict, parser-safe ChordPro format.
@@ -97,21 +96,38 @@ For every line pair (Chord line + Text line) in the image, perform the following
 
 CHORDPRO FORMATTING SAFE RULES (ZERO TOLERANCE):
 The frontend utilizes chordsheetjs and a rigid @tombatossals/chords-db database. Any deviation will crash the React application. Obey these rules unconditionally:
+
 - NOTATION CONVERSION (MANDATORY): You MUST convert Latin notation to International notation.
   * DO/RE/MI/FA/SOL/LA/SI -> C/D/E/F/G/A/B
   * "m" or "-" (minor) -> must be "m" (e.g., Rem -> Dm, Sol- -> Gm)
   * "7" -> remains "7" (e.g., Lam7 -> Am7)
   * "/" (bass) -> remains "/" (e.g., Do/Sol -> C/G)
+  * "#" and "b" (accidentals) -> remain as-is (e.g., Fa#m -> F#m, Sib -> Bb)
   * IF YOU OUTPUT "Do, Re, Mi, Sol-, Re-" YOU HAVE FAILED THE TASK.
 
-- Bracket Placement (No Spaces): Chords must be enclosed in brackets and attached directly to the start of the matching syllable WITH ZERO SPACES between the bracket and the letter or inside the bracket.
-  * CORRECT: [C]Mare | [Dm7]Sole | pa[G]rola
+- Bracket Placement (ZERO SPACES - CRITICAL):
+  Chords must be enclosed in brackets and attached DIRECTLY to the start of the matching syllable.
+  There must be ZERO spaces between the closing bracket ']' and the next character, and ZERO spaces inside the brackets.
+  * CORRECT:   [C]Mare | [Dm7]Sole | pa[G]rola
   * FATAL ERROR: [C] Mare | [C ]Mare | [ C ] Mare | pa [G] rola
+  * ALSO FATAL: [C]  Mare (double space after bracket)
 
-- Anti-Hallucination (Strict Fallback): Transcribe the exact chord printed. If an image is blurry, obscured by shadows, or shows tiny print, DO NOT hallucinate complex jazz extensions (e.g., do not invent Cmaj7/9 or G13b9). Fallback to the clearest base chord (e.g., C or G) readable. The database only supports standard suffixes (major, minor, m7, maj7, dim, sus4, etc.).
+- Metadata Tags (MANDATORY at file start):
+  * {title: <exact title from the page>}
+  * {artist: <artist if visible, otherwise "Sconosciuto">}
+  * {key: <detected key of the song, e.g. C, Am, G>}  -- Infer from the first and last chords if not explicitly written.
+
+- Section Tags:
+  * Verses: {start_of_verse} / {end_of_verse}
+  * Choruses: {start_of_chorus} / {end_of_chorus}
+  * Bridges: {start_of_bridge} / {end_of_bridge}
+  * Annotations like "x2", "x3", "Solo", "Intro", "Outro", "Interlude" -> {comment: x2}, {comment: Intro}, etc.
+  * Do NOT leave blank lines inside section blocks.
+
+- Anti-Hallucination (Strict Fallback): Transcribe the exact chord printed. If an image is blurry, obscured by shadows, or shows tiny print, DO NOT hallucinate complex jazz extensions (e.g., do not invent Cmaj7/9 or G13b9). Fallback to the clearest base chord (e.g., C or G) readable. The database only supports standard suffixes (major, minor, m7, maj7, dim, sus4, sus2, aug, 7, add9, etc.).
 
 FEW-SHOT EXAMPLE (CHARACTER-TO-CHORD MAPPING)
-Input Image Context: (Image showing "Rem7" over "Amo", "Sol" over "re")
+Input Image Context: (Image showing "Rem7" over "Amo", "Sol" over "re", with "x2" annotation)
 Your Output:
 <internal_verification>
 Line Pair 1:
@@ -121,6 +137,7 @@ Line Pair 1:
 - Verification: 2 chords found, 2 converted, 2 mapped.
 </internal_verification>
 
+{comment: x2}
 [Dm7]Amo[G]re
 
 Now, analyze the user's provided ${imagesList.length} images. Remember: NO LATIN NOTATION. ONLY A,B,C,D,E,F,G.`;
@@ -151,16 +168,21 @@ Now, analyze the user's provided ${imagesList.length} images. Remember: NO LATIN
             // 3. Rimuoviamo residui markdown se presenti
             chordProContent = chordProContent.replace(/```chordpro|```/g, '').trim();
 
-            // 4. FIX LAST RESORT: Se Gemini ha ignorato il prompt e ha usato notazione italiana, proviamo a convertirla noi
-            // Questo è un paracadute se l'AI fallisce l'istruzione
-            const notationMap = {
-              'Do': 'C', 'Re': 'D', 'Mi': 'E', 'Fa': 'F', 'Sol': 'G', 'La': 'A', 'Si': 'B'
-            };
-            Object.entries(notationMap).forEach(([it, en]) => {
-              const regex = new RegExp(`\\[${it}`, 'g');
-              chordProContent = chordProContent.replace(regex, `[${en}`);
-            });
-            chordProContent = chordProContent.replace(/-]/g, 'm]'); // Converte [Re-] in [Dm] (dopo il cambio Re->D)
+            // 4. FIX LAST RESORT: Se Gemini ha ignorato il prompt e ha usato notazione italiana, convertiamo noi
+            // Ordine decrescente per lunghezza: "Sol" prima di "Si"/"La" per evitare conflitti parziali
+            const notationMap = [
+              ['Sol', 'G'], ['Do', 'C'], ['Re', 'D'], ['Mi', 'E'],
+              ['Fa', 'F'], ['La', 'A'], ['Si', 'B']
+            ];
+            for (const [it, en] of notationMap) {
+              // Converte dentro le brackets: [Sol#m7] → [G#m7], [Do/Sol] → [C/G]
+              chordProContent = chordProContent.replace(
+                new RegExp(`(\\[(?:[A-Ga-g][#b]?[a-z0-9]*/?)?)${it}`, 'g'),
+                `$1${en}`
+              );
+            }
+            // Converte il suffisso "-" (minore in notazione italiana) in "m": [D-] → [Dm], [G-7] → [Gm7]
+            chordProContent = chordProContent.replace(/(\[[A-G][#b]?)-/g, '$1m');
 
             if (chordProContent) {
               addLog(`Trascrizione completata con ${modelName}.`);
